@@ -2,6 +2,11 @@
 export function polishStorefront(html) {
   html=html.replaceAll("alert('Esta funcionalidade não faz parte desta loja.');","/* unsupported action has been hidden */");
   const css=String.raw`<style id="popozuda-verified-links">
+    /* The captured transition has no Shopify lifecycle to dismiss it. */
+    page-transition{display:none!important}
+    /* Captured predictive results have no search controller. Hidden descendants
+       must not intercept clicks through the media visibility overrides. */
+    predictive-search .search__content{display:none!important}
     a[href^="#conta-indisponivel"],a[href^="#link-indisponivel"],
     product-card:has(a[href^="#produto-indisponivel"]){display:none!important}
     .cart-drawer__empty-description:has(a[href^="#link-indisponivel"]){display:none!important}
