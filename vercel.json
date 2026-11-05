@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://popozuda-site-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://popozuda-site-production.up.railway.app/health"
+    },
+    {
+      "source": "/products/lisinha",
+      "destination": "/lisinha.html"
+    },
+    {
+      "source": "/products/popozuda-cream",
+      "destination": "/creme.html"
+    },
+    {
+      "source": "/products/spray-popozuda",
+      "destination": "/spray.html"
+    }
+  ]
+}
