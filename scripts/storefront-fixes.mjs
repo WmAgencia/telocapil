@@ -2,6 +2,8 @@
 export function polishStorefront(html) {
   html=html.replaceAll('<p>USE O CUPOM <strong>BEMVINDO</strong> E GANHE 5% OFF</p>','<p><strong>10% OFF</strong> NA PRIMEIRA COMPRA · DESCONTO AUTOMÁTICO</p>');
   html=html.replaceAll("alert('Esta funcionalidade não faz parte desta loja.');","/* unsupported action has been hidden */");
+  html=html.replace("let footer=dialog.querySelector('#replica-cart-bottom');","const caption=dialog.querySelector('caption');if(caption)caption.textContent='Total do carrinho '+format(total());let footer=dialog.querySelector('#replica-cart-bottom');");
+  html=html.replace("el.setAttribute('aria-label','Total de itens no carrinho: '+count())","el.setAttribute('aria-label','Total de itens no carrinho: '+count());el.querySelectorAll('.visually-hidden').forEach(text=>text.remove())");
   const css=String.raw`<style id="popozuda-verified-links">
     /* The captured transition has no Shopify lifecycle to dismiss it. */
     page-transition{display:none!important}
