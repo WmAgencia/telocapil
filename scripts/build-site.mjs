@@ -84,6 +84,10 @@ for(const [name,file] of Object.entries(routes)){
  html=restoreGallerySources(html);
  html=html.replace(/<img\b[^>]*>/gi,fixImg);
  html=html.replace(/<source\b[^>]*>/gi,fixSource);
+ // Shopify marks video posters as loading until its component hydrates.
+ // Our static version does not run that lifecycle; leave the actual poster visible.
+ html=html.replace(/<deferred-media\b[^>]*>/gi,tag=>tag.replace(/\sdata-loading(?:=(?:""|''))?(?=\s|>)/gi,''));
+
  html=html.replace(/<moast-carousel\b[\s\S]*?<\/moast-carousel>/gi,makeCommunity);
 
  html=html.replaceAll('JSON.stringify(window.parent.__popCart||{})','(localStorage.getItem("popozuda_cart")||"{}")');
@@ -93,6 +97,10 @@ for(const [name,file] of Object.entries(routes)){
  // Shopify's reveal observers are unavailable in the saved site. Always display
  // the licensed photographs even where their original animation was not fired.
  html=html.replace('</head>','<style id="popozuda-gallery-reveal">.media-gallery__item img.media__image,.media-gallery__grid-thumbnails img.media__image,.testimonial-slider img.media__image,.video-card img.media__image,.products-bundle-selection img.media__image,.product-card__media img.media__image,.media.image-zoom-reveal img.media__image{opacity:1!important;visibility:visible!important;transform:none!important;filter:none!important}.testimonial-slider__slide--active .testimonial-slider__slide-avatar,.testimonial-slider__thumbnails .testimonial-slider__slide-avatar{opacity:1!important;visibility:visible!important}.media-gallery .media__image{content-visibility:visible!important}.media-gallery .media--loading{background:transparent!important}</style></head>');
+
+ // Preserve the original testimonial thumbnails while removing the loading veil.
+ html=html.replace('</head>','<style id="popozuda-deferred-media-fix">deferred-media:not([data-playing])>.deferred-media__loading{display:none!important}deferred-media:not([data-playing])>.deferred-media__poster-button{opacity:1!important;visibility:visible!important}video-card .deferred-media__poster-button img.media__image{opacity:1!important;visibility:visible!important;transform:none!important}video-card deferred-media>.deferred-media__poster-button{display:block!important}</style></head>');
+ html=html.replace('</body>',`<script id="popozuda-testimonial-playback">document.addEventListener('click',function(event){const button=event.target.closest('video-card deferred-media > .deferred-media__poster-button');if(!button)return;const media=button.parentElement;if(media.querySelector(':scope > video'))return;const template=media.querySelector(':scope > template');const original=template&&template.content.querySelector('video');if(!original)return;event.preventDefault();const player=original.cloneNode(true);player.removeAttribute('autoplay');player.autoplay=false;player.removeAttribute('loop');player.loop=false;player.controls=true;player.muted=false;player.preload='metadata';player.playsInline=true;player.style.cssText='display:block;width:100%;height:100%;object-fit:cover;';media.appendChild(player);const play=player.play();if(play&&typeof play.then==='function'){play.then(function(){button.style.display='none';media.setAttribute('data-playing','true')}).catch(function(){player.remove();button.style.display='';media.removeAttribute('data-playing')})}else{button.style.display='none';media.setAttribute('data-playing','true')}});</script></body>`);
  html=html.replace(/<html\b/i,'<html data-popozuda-static="true"');
  html=html.replace(/Com tecnologia da Shopify/gi,'');
  if(name==='checkout'){
@@ -102,6 +110,15 @@ for(const [name,file] of Object.entries(routes)){
  fs.writeFileSync(path.join(root,file),html,'utf8');
  console.log('Generated',file,'bytes',Buffer.byteLength(html));
 }
+
+// Guard against publishing a Lisinha review section with invisible posters.
+const lisinhaMarkup=fs.readFileSync(path.join(root,'lisinha.html'),'utf8');
+const videoReviewSection=lisinhaMarkup.slice(lisinhaMarkup.indexOf('Veja os depoimentos'),lisinhaMarkup.indexOf('Veja os depoimentos')+90000);
+if(!videoReviewSection.includes('<video-card'))throw Error('Seção de depoimentos não encontrada no HTML da Lisinha');
+const reviewPosters=[...videoReviewSection.matchAll(/<video-card\b[\s\S]*?<button\b[^>]*\bdeferred-media__poster-button\b[\s\S]*?<img\b[^>]*\bsrc="([^"]+)"/gi)];
+if(reviewPosters.length<5)throw Error('Faltam capas dos vídeos: '+reviewPosters.length+' de 5');
+if(/<deferred-media\b[^>]*\bdata-loading(?=\s|>)/i.test(videoReviewSection))throw Error('Skeleton da Shopify ainda oculta capas dos vídeos');
+console.log('Popozuda testimonial poster audit:',reviewPosters.length,'posters and no stuck loading state');
 
 const galleryExpectations={lisinha:5,creme:7,spray:5};
 const galleryUrls=new Map();
