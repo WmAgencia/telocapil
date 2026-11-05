@@ -15,7 +15,7 @@ export function upgradePromotion(html){
   "function checkoutFreight(){if(shippingCents!==null)return shippingCents;const sub=getTotalItems();const threshold=Number(settings?.freeShippingThresholdCents||10000);if(Object.entries(cart).some(([id,n])=>(id==='lisinha'||id==='spray')&&n>=2)||(threshold>0&&sub>=threshold))return 0;return Number(settings?.shippingFlatCents||2329)}function promoDiscount(){return verifiedFirstDiscount===null?Math.round((getTotalItems()+checkoutFreight())*.10):verifiedFirstDiscount}function subtotalWithDiscount(){return getTotalItems()-promoDiscount()}");
  html=replaceOne(html,
   "document.getElementById('discount').textContent=getOriginalSubtotal()>subtotalWithDiscount()?'- '+BRL(getOriginalSubtotal()-subtotalWithDiscount()):'—';",
-  "document.getElementById('discount').textContent=(getOriginalSubtotal()-getTotalItems()+promoDiscount())>0?'- '+BRL(getOriginalSubtotal()-getTotalItems()+promoDiscount()):'—';document.getElementById('discount').previousElementSibling.textContent=verifiedFirstDiscount===0?'Desconto nos kits':'10% de desconto na primeira compra';");
+  "document.getElementById('discount').textContent=promoDiscount()>0?'- '+BRL(promoDiscount()):'—';document.getElementById('discount').previousElementSibling.textContent=verifiedFirstDiscount===0?'Desconto de primeira compra':'10% de desconto na primeira compra';");
  html=replaceOne(html,
   "document.getElementById('shipping').textContent=shippingCents===null?'A calcular':BRL(shippingCents);",
   "document.getElementById('shipping').textContent=checkoutFreight()===0?'Grátis':BRL(checkoutFreight());");
@@ -34,5 +34,6 @@ export function upgradePromotion(html){
  html=replaceOne(html,
   '</head>',
   '<style id="popozuda-first-purchase-style">.promo-badge{margin:18px 0;padding:15px 16px;border:1px solid #e9bfd0;background:linear-gradient(135deg,#fff7fa,#fff0f4);border-radius:16px;box-shadow:0 6px 17px rgba(119,16,55,.06);display:flex;flex-direction:column;gap:5px;color:#81133d}.promo-badge strong{font-size:13px;font-weight:800;line-height:1.45}.promo-badge small{font-size:11px;color:#855f6f;line-height:1.55}.aside .totalrow:has(#discount){color:#8f1744}.aside .totalrow #discount{color:#ab1e4f;font-weight:750}</style></head>');
+ html=replaceOne(html,"document.getElementById('subtotal').textContent=BRL(getOriginalSubtotal());","document.getElementById('subtotal').textContent=BRL(getTotalItems());");
  return html;
 }
