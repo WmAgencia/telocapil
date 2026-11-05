@@ -1,0 +1,1 @@
+export default function handler(req,res){if(req.method!=='GET')return res.status(405).end();res.setHeader('Cache-Control','no-store');return res.status(200).json({enabled:process.env.META_TRACKING_ENABLED==='true',pixelId:process.env.META_TRACKING_ENABLED==='true'?(process.env.META_PIXEL_ID||null):null})}
