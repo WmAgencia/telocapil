@@ -90,7 +90,7 @@ document.getElementById('checkoutNotice')?.setAttribute('aria-live','polite');
 show(1);
 })();</script>`;
 
-const premium=String.raw\`<style id="popozuda-checkout-premium">
+const premium=String.raw`<style id="popozuda-checkout-premium">
 :root{--pop-wine:#9e1349;--pop-wine-deep:#700d34;--pop-blush:#fff6f3;--pop-gold:#f1f7ad;--pop-line:#ecd9df;--pop-text:#2f232c;--pop-shadow:0 18px 48px rgba(100,24,55,.10),0 3px 12px rgba(100,24,55,.045)}
 body{background:linear-gradient(135deg,#fffaf8 0%,#fff 55%,#fff9f7 100%);color:var(--pop-text)}
 .shell{box-shadow:none!important;background:transparent!important}
@@ -150,8 +150,8 @@ body{background:linear-gradient(135deg,#fffaf8 0%,#fff 55%,#fff9f7 100%);color:v
  .mob-summary{border-radius:15px!important;background:#fff7fb!important}
 }
 @media(prefers-reduced-motion:reduce){.wizard-buttons .wizard-next,#pay,.wizard-panel input,.wizard-panel select{transition:none!important}}
-</style>\`;
-const cepFill=String.raw\`<script id="popozuda-cep-autofill">(function(){
+</style>`;
+const cepFill=String.raw`<script id="popozuda-cep-autofill">(function(){
 'use strict';
 const form=document.getElementById('checkoutForm');
 if(!form)return;
@@ -178,13 +178,13 @@ async function lookup(digits){
  if(controller)controller.abort();const ctl=new AbortController();controller=ctl;
  msg('Buscando endereço pelo CEP…','loading');
  for(const url of ['https://viacep.com.br/ws/'+digits+'/json/','https://brasilapi.com.br/api/cep/v1/'+digits]){
-  if(ctl.signal.aborted||cep.value.replace(/\\D/g,'')!==digits)return;
+  if(ctl.signal.aborted||cep.value.replace(/\D/g,'')!==digits)return;
   try{
    const result=await fetch(url,{signal:ctl.signal,cache:'no-store',headers:{'Accept':'application/json'}});
    if(!result.ok)continue;
    const data=normalize(await result.json());
    if(!data)continue;
-   if(cep.value.replace(/\\D/g,'')!==digits)return;
+   if(cep.value.replace(/\D/g,'')!==digits)return;
    [['line1',data.street],['district',data.district],['city',data.city],['state',data.state]].forEach(([name,content])=>{
      const control=val(name);if(!control||!content)return;
      control.value=content;
@@ -199,7 +199,7 @@ async function lookup(digits){
  if(!ctl.signal.aborted)msg('Não foi possível localizar o CEP. Preencha o endereço manualmente.','error');
 }
 cep.addEventListener('input',()=>{
- const digits=cep.value.replace(/\\D/g,'').slice(0,8);
+ const digits=cep.value.replace(/\D/g,'').slice(0,8);
  cep.value=digits.length>5?digits.slice(0,5)+'-'+digits.slice(5):digits;
  clearTimeout(timer);
  if(controller)controller.abort();
@@ -207,8 +207,8 @@ cep.addEventListener('input',()=>{
  if(digits===current&&status.dataset.kind==='success')return;
  current=digits;timer=setTimeout(()=>lookup(digits),340);
 });
-cep.addEventListener('blur',()=>{const digits=cep.value.replace(/\\D/g,'');if(digits.length===8&&status.dataset.kind!=='success'){clearTimeout(timer);lookup(digits)}});
-})();</script>\`;
+cep.addEventListener('blur',()=>{const digits=cep.value.replace(/\D/g,'');if(digits.length===8&&status.dataset.kind!=='success'){clearTimeout(timer);lookup(digits)}});
+})();</script>`;
 
 return html.replace(/<div class="development">[\s\S]*?<\/div>/,'')
 .replace('Preços e frete sujeitos à validação antes da publicação.','Frete calculado automaticamente antes do pagamento.')
