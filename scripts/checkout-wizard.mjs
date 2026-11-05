@@ -1,5 +1,5 @@
 export function upgradeCheckout(html){
-const css=String.raw\`<style id="popozuda-checkout-steps">
+const css=String.raw`<style id="popozuda-checkout-steps">
 .development{display:none!important}.main{padding-top:32px}.breadcrumb{display:none!important}
 .wizard-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:30px 0 34px}
 .wizard-progress button{border:0;background:none;padding:0;color:#8a8a8a;display:flex;flex-direction:column;gap:8px;align-items:flex-start;min-width:0;text-align:left;font-weight:600}
@@ -31,8 +31,8 @@ const css=String.raw\`<style id="popozuda-checkout-steps">
 @media(max-width:800px){.main{padding-top:25px}.wizard-progress{margin:24px 0 28px}.wizard-progress .wizard-label{font-size:11px;gap:5px}.wizard-progress .wizard-number{width:24px;height:24px}.wizard-panel h2{font-size:21px}}
 @media(max-width:360px){.wizard-progress{gap:7px}.wizard-progress .wizard-label{font-size:10px}.wizard-buttons .wizard-back{padding:12px}}
 @media(prefers-reduced-motion:reduce){.wizard-panel{animation:none}.wizard-progress .wizard-meter::before{transition:none}}
-</style>\`;
-const script=String.raw\`<script id="popozuda-progressive-checkout">(function(){
+</style>`;
+const script=String.raw`<script id="popozuda-progressive-checkout">(function(){
 'use strict';
 const form=document.getElementById('checkoutForm');if(!form||form.dataset.wizardReady)return;
 const groups=[...form.querySelectorAll(':scope > section.group')];if(groups.length<4)return;
@@ -72,14 +72,14 @@ controls.append(back,next);form.insertBefore(controls,alertArea);
 let step=1,maxReached=1;
 function notify(message){alertArea.textContent=message;alertArea.classList.add('visible');alertArea.scrollIntoView({block:'nearest'})}
 function clearMessage(){alertArea.textContent='';alertArea.classList.remove('visible')}
-function splitName(){const parts=full.value.trim().replace(/\\s+/g,' ').split(' ').filter(Boolean);first.value=parts.shift()||'';last.value=parts.join(' ')}
+function splitName(){const parts=full.value.trim().replace(/\s+/g,' ').split(' ').filter(Boolean);first.value=parts.shift()||'';last.value=parts.join(' ')}
 full.addEventListener('input',splitName);
-phone.addEventListener('input',()=>{const d=phone.value.replace(/\\D/g,'').slice(0,11);phone.value=d.length>10?'('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7):d.length>6?'('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6):d.length>2?'('+d.slice(0,2)+') '+d.slice(2):d});
-cpf.addEventListener('input',()=>{const d=cpf.value.replace(/\\D/g,'').slice(0,11);cpf.value=d.replace(/^(\\d{3})(\\d)/,'$1.$2').replace(/^(\\d{3})\\.(\\d{3})(\\d)/,'$1.$2.$3').replace(/(\\d{3})(\\d{1,2})$/,'$1-$2')});
-function validCpf(v){const d=v.replace(/\\D/g,'');if(d.length!==11||/^(\\d)\\1{10}$/.test(d))return false;for(let i=9;i<11;i++){let sum=0;for(let j=0;j<i;j++)sum+=Number(d[j])*(i+1-j);if(Number(d[i])!==((sum*10)%11)%10)return false}return true}
+phone.addEventListener('input',()=>{const d=phone.value.replace(/\D/g,'').slice(0,11);phone.value=d.length>10?'('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7):d.length>6?'('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6):d.length>2?'('+d.slice(0,2)+') '+d.slice(2):d});
+cpf.addEventListener('input',()=>{const d=cpf.value.replace(/\D/g,'').slice(0,11);cpf.value=d.replace(/^(\d{3})(\d)/,'$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/,'$1.$2.$3').replace(/(\d{3})(\d{1,2})$/,'$1-$2')});
+function validCpf(v){const d=v.replace(/\D/g,'');if(d.length!==11||/^(\d)\1{10}$/.test(d))return false;for(let i=9;i<11;i++){let sum=0;for(let j=0;j<i;j++)sum+=Number(d[j])*(i+1-j);if(Number(d[i])!==((sum*10)%11)%10)return false}return true}
 function validate(n){for(const input of panels[n-1].querySelectorAll('input[required],select[required]')){if(!input.checkValidity()){input.reportValidity();input.focus();return false}}
-if(n===1){if(full.value.trim().length<3){notify('Informe seu nome completo.');full.focus();return false}const digits=phone.value.replace(/\\D/g,'');if(digits.length<10||digits.length>11){notify('Informe um telefone com DDD válido.');phone.focus();return false}if(!validCpf(cpf.value)){notify('Confira o CPF informado.');cpf.focus();return false}splitName()}
-if(n===2&&field('postalCode').value.replace(/\\D/g,'').length!==8){notify('Confira o CEP informado.');field('postalCode').focus();return false}return true}
+if(n===1){if(full.value.trim().length<3){notify('Informe seu nome completo.');full.focus();return false}const digits=phone.value.replace(/\D/g,'');if(digits.length<10||digits.length>11){notify('Informe um telefone com DDD válido.');phone.focus();return false}if(!validCpf(cpf.value)){notify('Confira o CPF informado.');cpf.focus();return false}splitName()}
+if(n===2&&field('postalCode').value.replace(/\D/g,'').length!==8){notify('Confira o CEP informado.');field('postalCode').focus();return false}return true}
 function addressReview(){const v=name=>(field(name)?.value||'').trim();review.innerHTML='<strong>Entrega para</strong><p></p>';review.querySelector('p').textContent=[full.value.trim(),v('line1')+', '+v('number')+(v('line2')?' — '+v('line2'):''),v('district')+' · '+v('city')+'/'+v('state'),'CEP '+v('postalCode')].join(' · ')}
 function show(n){step=n;maxReached=Math.max(maxReached,n);form.dataset.currentStep=String(n);panels.forEach((panel,i)=>{const active=i===n-1;panel.dataset.visible=String(active);panel.hidden=!active;panel.setAttribute('aria-hidden',String(!active))});items.forEach((btn,i)=>{btn.dataset.status=i+1===n?'current':i+1<n?'done':'upcoming';btn.disabled=i+1>maxReached;btn.setAttribute('aria-current',i+1===n?'step':'false')});next.textContent=n===1?'Continuar para endereço':'Continuar para pagamento';if(n===3)addressReview();clearMessage();if(progress.getBoundingClientRect().top<0)progress.scrollIntoView({behavior:'smooth',block:'start'})}
 next.addEventListener('click',async()=>{if(!validate(step))return;if(step===1)show(2);else if(step===2){show(3);for(let i=0;i<25;i++){if(step!==3)return;if(!pay.disabled){if(!document.querySelector('#payment-element iframe'))pay.click();return}await new Promise(resolve=>setTimeout(resolve,150))}}});
@@ -88,8 +88,8 @@ items.forEach((btn,i)=>btn.addEventListener('click',()=>{if(i+1>=step||i+1>maxRe
 form.addEventListener('submit',event=>{if(step!==3){event.preventDefault();event.stopImmediatePropagation();notify('Conclua os dados e o endereço antes de pagar.');return}splitName()},true);
 document.getElementById('checkoutNotice')?.setAttribute('aria-live','polite');
 show(1);
-})();</script>\`;
-return html.replace(/<div class="development">[\\s\\S]*?<\\/div>/,'')
+})();</script>`;
+return html.replace(/<div class="development">[\s\S]*?<\/div>/,'')
 .replace('Preços e frete sujeitos à validação antes da publicação.','Frete calculado automaticamente antes do pagamento.')
 .replace('Política de privacidade e termos de compra: configurar a versão oficial aprovada.','Pagamento protegido e dados utilizados somente para processar o pedido.')
 .replace('</head>',css+'</head>')
