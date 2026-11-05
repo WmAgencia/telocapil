@@ -36,6 +36,9 @@ export default async function handler(req,res){
       return res.status(409).json({error:'O carrinho foi alterado desde a primeira tentativa. Aguarde alguns minutos e reinicie a compra para manter os valores corretos.'});
     }
     const previousDiscount=Number(old.metadata.first_purchase_discount||0);
+    const oldAddress=old.shipping?.address||{};
+    const sameAddress=old.shipping?.name===name&&old.shipping?.phone===phone&&oldAddress.postal_code===postalCode&&oldAddress.line1===line1+' '+number&&oldAddress.city===city&&oldAddress.state===state&&oldAddress.line2===district+' '+clean(c.line2,80);
+    if(sameAddress)return res.status(200).json({clientSecret:old.client_secret,paymentIntentId:old.id,shippingCents:freight,amount:old.amount,firstPurchaseDiscountCents:previousDiscount,firstPurchaseEligible:previousDiscount>0,baseAmount:base.amount,continued:true});
     if(old.status!=='requires_action'){
       // A returning customer may have corrected their delivery address after reload.
       // Update the SAME PaymentIntent; never issue a duplicate charge or discount.
