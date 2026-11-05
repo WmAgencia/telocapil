@@ -34,8 +34,8 @@ export function polishStorefront(html) {
       const next=[...gallery.querySelectorAll('button[data-ref="next"]')];
       function sync(){
         const index=Math.max(0,thumbs.findIndex(t=>t.classList.contains('is-active')));
-        prev.forEach(button=>button.disabled=index===0);
-        next.forEach(button=>button.disabled=index===thumbs.length-1);
+        prev.forEach(button=>{button.disabled=index===0;button.classList.toggle('swiper-button-disabled',button.disabled);button.setAttribute('aria-disabled',String(button.disabled))});
+        next.forEach(button=>{button.disabled=index===thumbs.length-1;button.classList.toggle('swiper-button-disabled',button.disabled);button.setAttribute('aria-disabled',String(button.disabled))});
       }
       function move(delta){
         const index=Math.max(0,thumbs.findIndex(t=>t.classList.contains('is-active')));
