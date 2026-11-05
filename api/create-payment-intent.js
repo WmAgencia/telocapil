@@ -24,6 +24,7 @@ export default async function handler(req,res){
   ident=identity(email,cpf);
   claim=await reserve(ident,token);
   if(claim.pending)return res.status(409).json({error:'Existe uma compra em andamento com esses dados. Conclua-a ou aguarde alguns minutos para tentar novamente.'});
+  if(claim.waiting)return res.status(409).json({error:'Seu pagamento está sendo preparado. Aguarde alguns segundos e tente novamente.'});
   const stripe=new Stripe(process.env.STRIPE_SECRET_KEY);
   if(claim.reusedIntent){
     const old=await stripe.paymentIntents.retrieve(claim.reusedIntent);
