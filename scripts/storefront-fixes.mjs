@@ -9,12 +9,18 @@ export function polishStorefront(html) {
     .media-gallery__carousel-wrapper>.media-gallery__item{height:auto!important}
     /* Captured predictive results have no search controller. Hidden descendants
        must not intercept clicks through the media visibility overrides. */
-    predictive-search .search__content{display:none!important}
+    predictive-search .search__content,predictive-search .search__spinner{display:none!important}
     a[href^="#conta-indisponivel"],a[href^="#link-indisponivel"],
     product-card:has(a[href^="#produto-indisponivel"]){display:none!important}
     .cart-drawer__empty-description:has(a[href^="#link-indisponivel"]){display:none!important}
   </style>`;
   const js=String.raw`<script id="popozuda-prune-inactive-actions">(function(){
+    document.addEventListener('click',event=>{
+      const open=event.target.closest('[aria-controls="search-drawer-dialog"]');
+      const dialog=document.getElementById('search-drawer-dialog');
+      if(open&&dialog&&!dialog.open){event.preventDefault();dialog.showModal();dialog.querySelector('[name="q"]')?.focus()}
+      if(event.target.closest('#search-drawer-dialog .dialog__close')){event.preventDefault();dialog?.close()}
+    });
     // Keep keyboard activation equivalent to selecting an offer with a pointer.
     document.addEventListener('keydown',event=>{
       const offer=event.target.closest('.kaching-bundles__bar-main');
