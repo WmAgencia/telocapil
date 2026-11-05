@@ -7,6 +7,7 @@ import {upgradePromotion} from './promo-frontend.mjs';
 import {polishCheckout} from './checkout-polish.mjs';
 import {polishStorefront} from './storefront-fixes.mjs';
 import {optimizeHtml} from './performance.mjs';
+import {injectMetaPixel} from './meta-pixel.mjs';
 
 const root=process.cwd();
 const chunks=Array.from({length:17},(_,i)=>fs.readFileSync(path.join(root,'payload',String(i).padStart(2,'0')+'.txt'),'utf8'));
@@ -124,6 +125,7 @@ for(const [name,file] of Object.entries(routes)){
   html=polishStorefront(html);
   if(html.includes("alert('Esta funcionalidade não faz parte desta loja.');"))throw Error('Alerta de link indisponível persiste');
  }
+ html=injectMetaPixel(html,name);
  fs.writeFileSync(path.join(root,file),html,'utf8');
  console.log('Generated',file,'bytes',Buffer.byteLength(html));
 }
