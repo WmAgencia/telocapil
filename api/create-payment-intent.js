@@ -33,7 +33,17 @@ export default async function handler(req,res){
     if(old.status==='canceled')return res.status(409).json({error:'Este pagamento foi cancelado. Aguarde alguns minutos e reinicie a compra.'});
     if(!['requires_payment_method','requires_confirmation','requires_action'].includes(old.status))return res.status(409).json({error:'Seu pagamento ainda está sendo processado. Aguarde alguns minutos.'});
     if(old.metadata?.items!==JSON.stringify(base.quantities)||Number(old.metadata?.shipping)!==freight){
-      return res.status(409).json({error:'O carrinho foi alterado desde a primeira tentativa. Aguarde alguns minutos e reinicie a compra para manter os valores corretos.'});
+      // Only an unconfirmed intent can accept a revised basket. Stripe rejects
+      // updates if a concurrent confirmation has already moved it to processing.
+      if(old.status!=='requires_payment_method')return res.status(409).json({error:'O pagamento anterior já foi iniciado. Conclua-o antes de alterar o carrinho.'});
+      const revisedPromo=old.metadata.first_purchase==='1'?Math.round(base.amount*.10):0;
+      const revised=await stripe.paymentIntents.update(old.id,{
+        amount:base.amount-revisedPromo,
+        shipping:{name,phone,address:{country:'BR',postal_code:postalCode,line1:line1+' '+number,line2:district+' '+clean(c.line2,80),city,state}},
+        receipt_email:email,
+        metadata:{items:JSON.stringify(base.quantities),subtotal:String(base.subtotal),discount:String(base.discount+revisedPromo),shipping:String(freight),first_purchase_discount:String(revisedPromo)}
+      });
+      return res.status(200).json({clientSecret:revised.client_secret,paymentIntentId:revised.id,shippingCents:freight,amount:revised.amount,firstPurchaseDiscountCents:revisedPromo,firstPurchaseEligible:revisedPromo>0,baseAmount:base.amount,continued:true});
     }
     const previousDiscount=Number(old.metadata.first_purchase_discount||0);
     const oldAddress=old.shipping?.address||{};
