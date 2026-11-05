@@ -13,7 +13,7 @@ export function optimizeHtml(html,mediaDir){
   const dest=path.join(mediaDir,filename);
   if(!fs.existsSync(dest))fs.writeFileSync(dest,bytes);
   extractedImages++;bytesRemovedFromHtml+=raw.length;
-  return 'media/'+filename;
+  return '/media/'+filename;
  });
  let seen=0;
  html=html.replace(/<img\b[^>]*>/gi,tag=>{
