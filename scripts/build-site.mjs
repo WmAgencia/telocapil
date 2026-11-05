@@ -17,6 +17,7 @@ function removeAttr(tag,n){
  return tag.replace(new RegExp('\\s'+n+'\\s*=\\s*(?:"[^"]*"|\\x27[^\\x27]*\\x27)','gi'),'');
 }
 function absolute(u){
+ u=u.replaceAll('&amp;','&');
  if(u.startsWith('//'))return 'https:'+u;
  if(u.startsWith('/cdn/shop/'))return 'https://popozuda.com.br'+u;
  return u;
