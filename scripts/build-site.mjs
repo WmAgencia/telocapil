@@ -3,6 +3,7 @@ import path from 'node:path';
 import {gunzipSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
 import {upgradeCheckout} from './checkout-wizard.mjs';
+import {upgradePromotion} from './promo-frontend.mjs';
 
 const root=process.cwd();
 const chunks=Array.from({length:17},(_,i)=>fs.readFileSync(path.join(root,'payload',String(i).padStart(2,'0')+'.txt'),'utf8'));
@@ -108,6 +109,8 @@ for(const [name,file] of Object.entries(routes)){
   html=html.replace(/<div id="onefile-preview-disclaimer"[^>]*>[\s\S]*?<\/div>/gi,'');
   html=html.replaceAll('window.parent.location.href','window.location.href').replaceAll('window.top.location.href','window.location.href');
   html=upgradeCheckout(html);
+  html=upgradePromotion(html);
+  console.log('Automatic first purchase promotion compiled');
   if(!html.includes('popozuda-progressive-checkout'))throw Error('Checkout progressivo ausente do build');
   console.log('Checkout progressive wizard compiled: 3 stages');
  }
