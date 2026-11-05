@@ -27,7 +27,7 @@ export function polishCheckout(html,logoSource){
   .wizard-review p{color:#493640!important;font-size:13px!important;line-height:1.85!important;word-break:break-word}
   .wizard-panel[data-wizard-step="3"] .security{margin-top:14px;color:#6c5d65;font-size:12px}
   #payment-element{border:0!important;border-radius:0!important;background:none!important;overflow:visible!important}
-  .aside .promo-badge{display:none!important}
+  .wizard-panel[data-wizard-step="3"] .payment-area{min-height:0!important;padding:0!important}.wizard-panel[data-wizard-step="3"] #payment-element{min-height:54px}.wizard-panel[data-wizard-step="3"] .checkout-payment-choices{margin:12px 0 16px!important}@media(max-width:767px){.wizard-panel[data-visible="true"]{padding:18px!important}.wizard-progress .wizard-label{white-space:normal!important}.wizard-panel[data-wizard-step="3"] .payment-area{min-height:0!important}#pay{width:100%;min-height:52px}}.aside .promo-badge{display:none!important}
   .aside .totals{display:flex;flex-direction:column;gap:0;padding-top:13px}
   .aside .totalrow{font-size:14px!important;display:flex;align-items:baseline;justify-content:space-between;padding:12px 0!important;gap:12px;color:#48333e}
   .aside .totalrow:has(#shipping){order:2}.aside .totalrow:has(#subtotal){order:1}
