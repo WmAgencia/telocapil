@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Popozuda — Dermocosméticos para valorizar sua beleza</title>
+<style>
+html,body{margin:0;height:100%;width:100%;overflow:hidden;background:#fff;font-family:Arial,sans-serif}
+#loja{width:100%;height:100dvh;display:block;border:0;background:#fff}
+#loading{position:absolute;inset:0;display:grid;place-items:center;background:#fff6f3;color:#951744;font-size:16px;z-index:2;line-height:1.65;text-align:center}
+#loading b{font-size:30px;display:block}
+#error{display:none;position:absolute;inset:0;padding:40px;background:#fff;color:#8b1438;z-index:3}
+</style></head><body>
+<div id="loading"><div><b>popozuda</b>Preparando a loja e as fotografias originais…</div></div>
+<div id="error" role="alert"></div><iframe id="loja" title="Prévia da loja Popozuda" loading="eager"></iframe>
+<script id="embedded-pages" type="application/octet-stream"></script>
+<script>
+'use strict';
+function patchPage(page,source){
+ let t=source.replace(/,\s*<a[^>]*href=["']https:\/\/pt\.shopify\.com\/[^"']*["'][^>]*>Com tecnologia da Shopify<\/a>/gi,'');
+ if(page==='checkout'){
+  t=t.replace(/<div id="onefile-preview-disclaimer"[^>]*>[\s\S]*?<\/div>/gi,'');
+  t=t.replace(/new URL\('pedido\.html',location\.href\)/g,"new URL('pedido.html',window.parent.location.href)");
+  t=t.replace(/location\.href='pedido\.html\?payment_intent='/g,"window.top.location.href='pedido.html?payment_intent='");
+ }
+ return t;
+}
+let pages={}; let active='index'; let isReady=false;
+const frame=document.getElementById('loja');
+window.__popCart={};
+try{window.__popCart=JSON.parse(localStorage.getItem('popozuda_preview_cart')||'{}')}catch{}
+function toBinary(s){let b=atob(s),out=new Uint8Array(b.length);for(let i=0;i<b.length;i++)out[i]=b.charCodeAt(i);return out}
+async function init(){
+ try{
+  if(!('DecompressionStream' in window))throw new Error('Este arquivo requer Chrome ou Edge atualizado, com suporte a DecompressionStream.');
+  const chunks=await Promise.all(Array.from({length:17},async (_,i)=>{const resp=await fetch('/payload/'+String(i).padStart(2,'0')+'.txt',{cache:'force-cache'});if(!resp.ok)throw new Error('Imagem ou estilo indisponível: '+i);return resp.text();}));
+  const dat=toBinary(chunks.join(''));
+  const decompressed=new Blob([dat]).stream().pipeThrough(new DecompressionStream('gzip'));
+  pages=JSON.parse(await new Response(decompressed).text());
+  isReady=true;
+  show((location.hash||'#index').substring(1).split('&')[0]||'index',false);
+ }catch(err){document.getElementById('loading').style.display='none';const error=document.getElementById('error');error.style.display='block';error.textContent='Não foi possível abrir a prévia: '+err.message;console.error(err)}
+}
+function show(page,updateHash=true,anchor){
+ if(!pages[page])page='index';
+ active=page;
+ if(updateHash&&location.hash!=='#'+page){history.pushState(null,'','#'+page)}
+ document.title='Popozuda — '+(page==='index'?'Início':page.charAt(0).toUpperCase()+page.slice(1))+' | Popozuda';
+ frame.onload=()=>{
+  document.getElementById('loading').style.display='none';
+  if(anchor){try{frame.contentDocument.getElementById(anchor)?.scrollIntoView()}catch{}}
+ };
+ frame.srcdoc=patchPage(page,pages[page]);
+}
+window.addEventListener('message',event=>{
+ if(event.source!==frame.contentWindow||!event.data)return;
+ const d=event.data;
+ if(d.type==='navigate'){show(d.page||'index',true,d.anchor);}
+ if(d.type==='cart'){window.__popCart=d.cart||{};try{localStorage.setItem('popozuda_preview_cart',JSON.stringify(window.__popCart))}catch{}}
+ if(d.type==='external-blocked'){alert('Esta prévia não envia compras nem dados para a loja original. Navegue pelos três produtos disponíveis na loja.');}
+});
+window.addEventListener('popstate',()=>{if(isReady)show(location.hash.substring(1),false)});
+window.addEventListener('hashchange',()=>{if(isReady&&location.hash.substring(1)!==active)show(location.hash.substring(1),false)});
+init();
+</script>
+</body></html>

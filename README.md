@@ -1,7 +1,5 @@
-# Loja Popozuda / Telocapil
+# Popozuda — loja licenciada (homologação)
 
-Novo projeto da loja licenciada, separado do site de anúncios `lisinha-telocapil`.
+Projeto independente da landing `lisinha-telocapil`, baseado nas capturas originais fornecidas pelo licenciado. Todos os recursos visuais compactados estão em `payload/00.txt` a `payload/16.txt` e são reconstruídos dentro do navegador. O crédito visível da tecnologia Shopify foi removido conforme licença. **Checkout de produção bloqueado até validação de credenciais Stripe, webhook, frete, pedidos, fotos e regularidade dos produtos.**
 
-**Estado:** homologação visual e de checkout. Pagamentos de produção permanecem desabilitados até validação e cumprimento regulatório. A reprodução gráfica se baseia nas capturas originais fornecidas pelo titular.
-
-Checkout Stripe transparente com formulários internos, webhook e rastreamento serão publicados somente após testes completos.
+Não disponibilize chaves Stripe no repositório. A landing antiga não foi alterada.
