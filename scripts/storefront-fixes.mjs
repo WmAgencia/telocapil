@@ -1,9 +1,12 @@
 /** Hide dead account controls and products outside the three-item licensed catalog. */
 export function polishStorefront(html) {
+  html=html.replaceAll('<p>USE O CUPOM <strong>BEMVINDO</strong> E GANHE 5% OFF</p>','<p><strong>10% OFF</strong> NA PRIMEIRA COMPRA · DESCONTO AUTOMÁTICO</p>');
   html=html.replaceAll("alert('Esta funcionalidade não faz parte desta loja.');","/* unsupported action has been hidden */");
   const css=String.raw`<style id="popozuda-verified-links">
     /* The captured transition has no Shopify lifecycle to dismiss it. */
     page-transition{display:none!important}
+    .media-gallery__carousel-wrapper{height:auto!important}
+    .media-gallery__carousel-wrapper>.media-gallery__item{height:auto!important}
     /* Captured predictive results have no search controller. Hidden descendants
        must not intercept clicks through the media visibility overrides. */
     predictive-search .search__content{display:none!important}
@@ -32,6 +35,29 @@ export function polishStorefront(html) {
       }
       if(thumbs.length){prev?.addEventListener('click',()=>move(-1));next?.addEventListener('click',()=>move(1));thumbs.forEach(t=>t.addEventListener('click',()=>queueMicrotask(sync)));sync()}
     });
+    document.querySelectorAll('products-bought-together').forEach(group=>{
+      const cards=[...group.querySelectorAll('.product-bought-together__item')];
+      const button=group.querySelector('[ref="addAllToCart"]');
+      function selection(){return cards.filter(card=>card.querySelector('input[type="checkbox"]:checked')).map(card=>({id:card.querySelector('form[data-replica-add]')?.dataset.replicaAdd,quantity:Number(card.querySelector('[name="quantity"]')?.value||1)})).filter(item=>['lisinha','creme','spray'].includes(item.id))}
+      function update(){
+        const items=selection(),count=items.reduce((sum,item)=>sum+item.quantity,0);
+        const total=items.reduce((sum,item)=>sum+(window.__popozudaPreview?.calcLine(item.id,item.quantity)||0),0);
+        const amount=group.querySelector('[ref="subTotal"]'),counter=group.querySelector('[ref="itemCount"]');
+        if(amount)amount.textContent=(total/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        if(counter)counter.textContent=count+(count===1?' item':' itens');
+        if(button)button.disabled=!count;
+      }
+      cards.forEach(card=>{
+        const title=card.querySelector('.product-card__title')?.textContent.trim()||'produto';
+        card.querySelector('input[type="checkbox"]')?.setAttribute('aria-label','Adicionar '+title);
+        const quantity=card.querySelector('[name="quantity"]');
+        quantity?.setAttribute('aria-label','Quantidade de '+title);
+        quantity?.querySelectorAll('option').forEach(option=>{if(Number(option.value)>20)option.remove()});
+      });
+      group.addEventListener('change',update);
+      button?.addEventListener('click',event=>{event.preventDefault();selection().forEach(item=>window.__popozudaPreview?.add(item.id,item.quantity))});update();
+    });
+    document.querySelectorAll('.cart-drawer__close').forEach(button=>button.setAttribute('aria-label','Fechar carrinho'));
     function prune(){
       document.querySelectorAll('product-card:has(a[href^="#produto-indisponivel"])').forEach(card=>{
         const slide=card.closest('.swiper-slide');(slide||card).remove();
