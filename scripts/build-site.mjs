@@ -218,3 +218,16 @@ const report={generatedAt:new Date().toISOString(),optimizationReport,galleryAud
 fs.writeFileSync(path.join(root,'image-build-report.json'),JSON.stringify(report,null,2));
 console.log('Popozuda image audit',JSON.stringify({external:remote.size,local:files.size,originalUnavailable:failed.length,officialSubstitutions,remoteFallbacks:unresolved.length}));
 if(failed.length)console.warn('Media download failures:',JSON.stringify(failed));
+
+/* Vercel static output: keep Railway's Node server at the repository root,
+   but publish only the generated storefront and media, never source or secrets. */
+const publicDir=path.join(root,'public');
+fs.mkdirSync(publicDir,{recursive:true});
+for(const name of Object.values(routes)){
+ fs.copyFileSync(path.join(root,name),path.join(publicDir,name));
+}
+if(fs.existsSync(path.join(root,'pedido.html'))){
+ fs.copyFileSync(path.join(root,'pedido.html'),path.join(publicDir,'pedido.html'));
+}
+fs.cpSync(mediaDir,path.join(publicDir,'media'),{recursive:true,force:true});
+console.log('Vercel static storefront ready in public/');
