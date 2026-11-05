@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {gunzipSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
+import {upgradeCheckout} from './checkout-wizard.mjs';
 
 const root=process.cwd();
 const chunks=Array.from({length:17},(_,i)=>fs.readFileSync(path.join(root,'payload',String(i).padStart(2,'0')+'.txt'),'utf8'));
@@ -106,6 +107,9 @@ for(const [name,file] of Object.entries(routes)){
  if(name==='checkout'){
   html=html.replace(/<div id="onefile-preview-disclaimer"[^>]*>[\s\S]*?<\/div>/gi,'');
   html=html.replaceAll('window.parent.location.href','window.location.href').replaceAll('window.top.location.href','window.location.href');
+  html=upgradeCheckout(html);
+  if(!html.includes('popozuda-progressive-checkout'))throw Error('Checkout progressivo ausente do build');
+  console.log('Checkout progressive wizard compiled: 3 stages');
  }
  fs.writeFileSync(path.join(root,file),html,'utf8');
  console.log('Generated',file,'bytes',Buffer.byteLength(html));
