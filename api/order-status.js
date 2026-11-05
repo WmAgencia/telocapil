@@ -1,1 +1,13 @@
-import Stripe from 'stripe';export default async function handler(req,res){res.setHeader('Cache-Control','no-store');if(req.method!=='GET')return res.status(405).json({error:'Método não permitido'});const id=String(req.query.payment_intent||'');if(!/^pi_[a-zA-Z0-9]+$/.test(id)||!process.env.STRIPE_SECRET_KEY)return res.status(400).json({error:'Pedido inválido'});try{const pi=await new Stripe(process.env.STRIPE_SECRET_KEY).paymentIntents.retrieve(id);if(pi.metadata?.origin!=='popozuda-reproducao')return res.status(404).json({error:'Pedido não encontrado'});return res.status(200).json({status:pi.status,orderId:pi.metadata?.order_id||null,amount:pi.amount,currency:'BRL'});}catch{return res.status(404).json({error:'Pedido não encontrado'})}}
+import Stripe from 'stripe';
+import {purchaseData} from '../lib/meta-conversions.js';
+export default async function handler(req,res){
+ res.setHeader('Cache-Control','no-store');
+ if(req.method!=='GET')return res.status(405).json({error:'Método não permitido'});
+ const id=String(req.query.payment_intent||'');
+ if(!/^pi_[a-zA-Z0-9]+$/.test(id)||!process.env.STRIPE_SECRET_KEY)return res.status(400).json({error:'Pedido inválido'});
+ try{
+  const pi=await new Stripe(process.env.STRIPE_SECRET_KEY).paymentIntents.retrieve(id);
+  if(pi.metadata?.origin!=='popozuda-reproducao')return res.status(404).json({error:'Pedido não encontrado'});
+  return res.status(200).json({status:pi.status,orderId:pi.metadata?.order_id||null,amount:pi.status==='succeeded'?pi.amount_received:pi.amount,currency:'BRL',livemode:pi.livemode===true,trackingAllowed:pi.metadata?.analytics_consent==='yes',contents:purchaseData(pi).contents});
+ }catch{return res.status(404).json({error:'Pedido não encontrado'})}
+}

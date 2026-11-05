@@ -12,7 +12,7 @@ import trackingConfig from './api/tracking-config.js';
 import {identity,reserve,release} from './lib/first-purchase.js';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const handlers=new Map([['/api/checkout-config',checkoutConfig],['/api/create-payment-intent',createPaymentIntent],['/api/order-status',orderStatus],['/api/stripe-webhook',stripeWebhook],['/api/tracking-config',trackingConfig]]);
-const files=new Map([['/','index.html'],['/index.html','index.html'],['/lisinha.html','lisinha.html'],['/creme.html','creme.html'],['/spray.html','spray.html'],['/checkout.html','checkout.html'],['/pedido.html','pedido.html'],['/products/lisinha','lisinha.html'],['/products/popozuda-cream','creme.html'],['/products/spray-popozuda','spray.html']]);
+const files=new Map([['/','index.html'],['/index.html','index.html'],['/lisinha.html','lisinha.html'],['/creme.html','creme.html'],['/spray.html','spray.html'],['/checkout.html','checkout.html'],['/pedido.html','public/pedido.html'],['/products/lisinha','lisinha.html'],['/products/popozuda-cream','creme.html'],['/products/spray-popozuda','spray.html']]);
 const types={'.html':'text/html; charset=utf-8','.webp':'image/webp','.avif':'image/avif','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.woff':'font/woff','.woff2':'font/woff2','.css':'text/css','.js':'text/javascript','.json':'application/json'};
 const port=Number(process.env.PORT||3000);
 const htmlCache=new Map();

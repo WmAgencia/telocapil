@@ -9,6 +9,17 @@ const PRODUCTS={
    server tokens or advanced matching data to the browser. */
 export function injectMetaPixel(html,page){
  if(html.includes('id="popozuda-meta-tracking"'))return html;
+ // Instrument the actual cart mutation, including lexical form handlers.
+ if(page!=='checkout'&&page!=='pedido'){
+  const old="cart[id]=Math.min(20,(cart[id]||0)+Math.max(1,qty));save();openCart();return true";
+  const next="const before=cart[id]||0;cart[id]=Math.min(20,before+Math.max(1,qty));save();openCart();const added=cart[id]-before;if(added>0)document.dispatchEvent(new CustomEvent('popozuda:cart-add',{detail:{id,quantity:added,value:(calcLine(id,cart[id])-calcLine(id,before))/100}}));return true";
+  if(!html.includes(old))throw Error('Meta cart instrumentation missing: '+page);
+  html=html.replace(old,next);
+ }
+ if(page==='checkout'){
+  html=html.replace(/origin:\{utmSource:[\s\S]*?fbc:window\.__popozudaTracking\?\.getAttribution\(\)\?\.fbc\|\|''\}/,"origin:(()=>{const a=window.__popozudaTracking?.getAttribution()||{};return {consent:localStorage.getItem('popozuda_analytics_consent_v1')==='yes',utmSource:a.utm_source||'',utmMedium:a.utm_medium||'',utmCampaign:a.utm_campaign||'',utmContent:a.utm_content||'',utmTerm:a.utm_term||'',fbp:a.fbp||'',fbc:a.fbc||'',sourceUrl:a.sourceUrl||''}})()");
+  html=html.replace(/window\.__popozudaTracking\?\.pixelEvent\('InitiateCheckout',\{content_ids:Object\.keys\(cart\),content_type:'product',value:data\.amount\/100,currency:'BRL'\}\);/,'');
+ }
  const prior=(html.match(/fbevents\.js|fbq\s*\(\s*['"]init['"]|facebook\.com\/tr\?/gi)||[]).length;
  console.log('Meta pre-existing tracker markers',page,prior);
  const client=String.raw`<script id="popozuda-meta-tracking">
@@ -19,13 +30,46 @@ window.__popozudaMetaTracking=true;
 const PIXEL='__PIXEL_ID__',PAGE=__PAGE_JSON__,PRODUCTS=__PRODUCTS_JSON__;
 const KEY='popozuda_analytics_consent_v1';
 let started=false;
+const ATTR='popozuda_attribution_v1';
+const debug=new URLSearchParams(location.search).get('tracking_debug')==='1';
+const rounded=value=>Math.round(value*100)/100;
+function eventId(){return 'pz_'+(window.crypto?.randomUUID?.()||Date.now().toString(36)+'_'+Math.random().toString(36).slice(2))}
 function track(name,data,extra){
- if(typeof window.fbq!=='function'||saved()!=='yes')return;
- try{window.fbq('trackSingle',PIXEL,name,data||{},extra||{})}catch(e){}
+ if(!started||typeof window.fbq!=='function'||saved()!=='yes')return false;
+ const options=Object.assign({eventID:eventId()},extra||{});
+ try{window.fbq('trackSingle',PIXEL,name,data||{},options);if(debug)console.info('[Meta audit]',JSON.stringify({event:name,pixel:PIXEL,data:data||{},event_id:options.eventID}));return true}catch(e){return false}
 }
-function productData(p,quantity){
- return {content_type:'product',content_ids:[p.id],contents:[{id:p.id,quantity:quantity||1}],content_name:p.name,currency:'BRL',value:p.value*(quantity||1)};
+function lineValue(id,quantity){
+ const p=PRODUCTS[id];if(!p)return 0;
+ const bundles=id==='lisinha'?{2:129.90,3:169.90}:id==='spray'?{2:119.90,3:159.90}:null;
+ if(!bundles)return rounded(p.value*quantity);
+ return rounded(Math.floor(quantity/3)*bundles[3]+(quantity%3===2?bundles[2]:quantity%3===1?p.value:0));
 }
+function productData(p,quantity,value){
+ const q=quantity||1,total=value===undefined?lineValue(p.id,q):rounded(value);
+ return {content_type:'product',content_ids:[p.id],contents:[{id:p.id,quantity:q,item_price:total/q}],content_name:p.name,currency:'BRL',value:total};
+}
+function cartData(){
+ let cart={};try{cart=JSON.parse(localStorage.getItem('popozuda_cart')||'{}')}catch(e){}
+ const contents=Object.entries(cart).filter(([id,q])=>PRODUCTS[id]&&Number.isSafeInteger(q)&&q>0&&q<=20).map(([id,quantity])=>({id,quantity,item_price:lineValue(id,quantity)/quantity}));
+ return {content_type:'product',content_ids:contents.map(p=>p.id),contents,currency:'BRL',value:rounded(contents.reduce((sum,p)=>sum+p.item_price*p.quantity,0)),num_items:contents.reduce((sum,p)=>sum+p.quantity,0)};
+}
+function attribution(){
+ if(saved()!=='yes')return {};
+ let previous={};try{previous=JSON.parse(sessionStorage.getItem(ATTR)||'{}')}catch(e){}
+ const params=new URLSearchParams(location.search),result=Object.assign({},previous);
+ for(const key of ['utm_source','utm_medium','utm_campaign','utm_content','utm_term']){const value=params.get(key);if(value)result[key]=value.slice(0,150)}
+ const click=params.get('fbclid');if(click&&/^[a-zA-Z0-9_-]{6,500}$/.test(click))result.fbc='fb.1.'+Date.now()+'.'+click;
+ const cookies=Object.fromEntries(document.cookie.split(';').map(x=>{const n=x.indexOf('=');return n<0?['','']:[x.slice(0,n).trim(),x.slice(n+1)]}));
+ if(cookies._fbp)result.fbp=cookies._fbp;if(cookies._fbc&&!click)result.fbc=cookies._fbc;
+ result.sourceUrl=location.origin+location.pathname;
+ try{sessionStorage.setItem(ATTR,JSON.stringify(result))}catch(e){}
+ return result;
+}
+window.__popozudaTracking={getAttribution:attribution,pixelEvent:track};
+document.addEventListener('popozuda:cart-add',function(event){
+ const d=event.detail||{},p=PRODUCTS[d.id];if(p&&Number.isSafeInteger(d.quantity)&&d.quantity>0)track('AddToCart',productData(p,d.quantity,d.value));
+});
 function start(){
  if(started)return;started=true;
  if(typeof window.fbq!=='function'){
@@ -34,35 +78,24 @@ function start(){
   t=b.createElement(e);t.async=true;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
   (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
  }
- window.fbq('init',PIXEL);
- track('PageView');
+ window.fbq('set','autoConfig',false,PIXEL);window.fbq('init',PIXEL);
+ attribution();track('PageView');
  if(PRODUCTS[PAGE])track('ViewContent',productData(PRODUCTS[PAGE],1));
- if(PAGE==='checkout')track('InitiateCheckout',{currency:'BRL'});
- let attempts=0;
- const monitor=setInterval(function(){
-  const store=window.__popozudaPreview;
-  if(store&&typeof store.add==='function'&&!store.add.__popozudaMetaWrapped){
-   const original=store.add;
-   const wrapped=function(id,quantity){
-    const result=original.apply(this,arguments);
-    const p=PRODUCTS[id];const q=Math.max(1,Math.min(20,Number(quantity)||1));
-    if(p&&result!==false)track('AddToCart',productData(p,q));
-    return result;
-   };
-   wrapped.__popozudaMetaWrapped=true;store.add=wrapped;
-  }
-  if(++attempts>=30||store?.add?.__popozudaMetaWrapped)clearInterval(monitor);
- },500);
+ if(PAGE==='checkout'){
+  const cart=cartData(),signature=JSON.stringify(cart.contents);
+  let prior='';try{prior=sessionStorage.getItem('popozuda_meta_checkout')||''}catch(e){}
+  if(cart.num_items&&prior!==signature&&track('InitiateCheckout',cart)){try{sessionStorage.setItem('popozuda_meta_checkout',signature)}catch(e){}}
+ }
  if(PAGE==='checkout'||PAGE==='pedido'){
   const id=new URLSearchParams(location.search).get('payment_intent');
   if(id&&/^pi_[a-zA-Z0-9]+$/.test(id)){
    fetch('/api/order-status?payment_intent='+encodeURIComponent(id),{cache:'no-store'})
     .then(r=>r.ok?r.json():null).then(order=>{
-      if(!order||order.status!=='succeeded'||!Number.isFinite(Number(order.amount))||Number(order.amount)<=0)return;
+      if(!order||order.status!=='succeeded'||order.livemode!==true||order.trackingAllowed!==true||!Number.isFinite(Number(order.amount))||Number(order.amount)<=0)return;
       const k='popozuda_meta_paid_'+id;
-      if(sessionStorage.getItem(k)==='1')return;
-      track('Purchase',{currency:'BRL',value:Number(order.amount)/100},{eventID:id});
-      sessionStorage.setItem(k,'1');
+      if(localStorage.getItem(k)==='1')return;
+      const items=Array.isArray(order.contents)?order.contents:[];
+      if(track('Purchase',{currency:'BRL',value:Number(order.amount)/100,content_type:'product',content_ids:items.map(p=>p.id),contents:items},{eventID:id})){localStorage.setItem(k,'1');sessionStorage.removeItem('popozuda_meta_checkout')}
     }).catch(()=>{});
   }
  }
@@ -72,7 +105,11 @@ function save(value){try{localStorage.setItem(KEY,value)}catch(e){}}
 let modal=null,focusBefore=null;
 const pausedNodes=[];
 function clearMarketingCookies(){
- ['_fbp','_fbc'].forEach(function(name){document.cookie=name+'=; Max-Age=0; Path=/; SameSite=Lax'});
+ try{sessionStorage.removeItem(ATTR)}catch(e){}
+ ['_fbp','_fbc'].forEach(function(name){
+  document.cookie=name+'=; Max-Age=0; Path=/; SameSite=Lax';
+  document.cookie=name+'=; Max-Age=0; Path=/; Domain='+location.hostname+'; SameSite=Lax';
+ });
 }
 function lockBackground(){
  document.documentElement.classList.add('cookie-choice-open');

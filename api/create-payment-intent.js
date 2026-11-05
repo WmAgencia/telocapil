@@ -1,3 +1,4 @@
+import {paymentAttribution} from '../lib/meta-conversions.js';
 import Stripe from 'stripe';
 import crypto from 'node:crypto';
 import {moneySummary} from '../lib/catalog.js';
@@ -14,6 +15,7 @@ export default async function handler(req,res){
   const input=req.body||{},c=input.customer||{},email=clean(c.email,254),name=clean(c.name),phone=clean(c.phone,30),cpf=clean(c.cpf,14),postalCode=clean(c.postalCode,8),state=clean(c.state,2),city=clean(c.city,80),line1=clean(c.line1,120),number=clean(c.number,20),district=clean(c.district,60);
   if(!/^\S+@\S+\.\S+$/.test(email)||!name||!phone||!validCPF(cpf)||!/^\d{8}$/.test(postalCode)||!/^[A-Z]{2}$/.test(state)||!city||!line1||!number||!district)return res.status(400).json({error:'Dados de entrega inválidos'});
   if(input.coupon)return res.status(400).json({error:'O desconto de primeira compra é automático; remova o cupom'});
+  const tracking=paymentAttribution(input.origin);
   const token=clean(input.checkoutToken,80);
   if(!/^[0-9a-f-]{36}$/i.test(token))return res.status(400).json({error:'Identificador de checkout inválido'});
   const subtotal=moneySummary(input.items,'',0),threshold=Number(process.env.SHIPPING_FREE_THRESHOLD_CENTS||0);
@@ -32,6 +34,7 @@ export default async function handler(req,res){
     if(old.status==='succeeded'||old.status==='processing')return res.status(409).json({error:'Já existe um pagamento enviado para processamento. Aguarde a confirmação antes de tentar outra compra.'});
     if(old.status==='canceled')return res.status(409).json({error:'Este pagamento foi cancelado. Aguarde alguns minutos e reinicie a compra.'});
     if(!['requires_payment_method','requires_confirmation','requires_action'].includes(old.status))return res.status(409).json({error:'Seu pagamento ainda está sendo processado. Aguarde alguns minutos.'});
+    if(Object.entries(tracking).some(([key,value])=>(old.metadata?.[key]||'')!==value))await stripe.paymentIntents.update(old.id,{metadata:tracking});
     if(old.metadata?.items!==JSON.stringify(base.quantities)||Number(old.metadata?.shipping)!==freight){
       // Only an unconfirmed intent can accept a revised basket. Stripe rejects
       // updates if a concurrent confirmation has already moved it to processing.
@@ -60,7 +63,6 @@ export default async function handler(req,res){
   const promo=claim.eligible?Math.round(base.amount*.10):0;
   const finalAmount=base.amount-promo;
   if(finalAmount<50)throw Error('Valor abaixo do mínimo');
-  const origin=input.origin||{};
   const data={amount:finalAmount,currency:'brl',automatic_payment_methods:{enabled:true},receipt_email:email,
     shipping:{name,phone,address:{country:'BR',postal_code:postalCode,line1:line1+' '+number,line2:district+' '+clean(c.line2,80),city,state}},
     metadata:{
@@ -68,8 +70,7 @@ export default async function handler(req,res){
       subtotal:String(base.subtotal),discount:String(base.discount+promo),shipping:String(freight),
       first_purchase_discount:String(promo),first_purchase:claim.eligible?'1':'0',
       cpf_key:ident.cpfKey,email_key:ident.emailKey,
-      utm_source:clean(origin.utmSource,90),utm_campaign:clean(origin.utmCampaign,90),utm_content:clean(origin.utmContent,90),
-      fbp:clean(origin.fbp,150),fbc:clean(origin.fbc,150)
+      ...tracking
     }
   };
   const idempotencyKey='pz-first-'+crypto.createHash('sha256').update(token).digest('hex');

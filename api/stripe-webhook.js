@@ -1,4 +1,21 @@
-import Stripe from 'stripe';import crypto from 'node:crypto';import {markPaid} from '../lib/first-purchase.js';export const config={api:{bodyParser:false}};async function rawBody(req){const chunks=[];for await(const ch of req)chunks.push(Buffer.from(ch));return Buffer.concat(chunks)}
-const hash=x=>crypto.createHash('sha256').update(String(x).trim().toLowerCase()).digest('hex');
-async function metaPurchase(pi){if(process.env.META_TRACKING_ENABLED!=='true'||!process.env.META_ACCESS_TOKEN||!process.env.META_PIXEL_ID)return;const user_data={},fbp=pi.metadata?.fbp||'',fbc=pi.metadata?.fbc||'';if(fbp)user_data.fbp=fbp;if(fbc)user_data.fbc=fbc;if(process.env.META_SEND_ADVANCED_MATCHING==='true'){if(pi.receipt_email)user_data.em=[hash(pi.receipt_email)];if(pi.shipping?.phone)user_data.ph=[hash(pi.shipping.phone.replace(/\D/g,''))]}if(!Object.keys(user_data).length)return;let products=[];try{products=JSON.parse(pi.metadata?.items||'[]')}catch{}const body={data:[{event_name:'Purchase',event_time:Math.floor(Date.now()/1000),event_id:pi.id,action_source:'website',event_source_url:process.env.SITE_URL||'',user_data,custom_data:{currency:'BRL',value:(pi.amount_received||pi.amount)/100,content_type:'product',content_ids:products.map(x=>x.id),contents:products}}]};const url='https://graph.facebook.com/v25.0/'+encodeURIComponent(process.env.META_PIXEL_ID)+'/events?access_token='+encodeURIComponent(process.env.META_ACCESS_TOKEN);const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!resp.ok)throw Error('Falha CAPI '+resp.status)}
-export default async function handler(req,res){if(req.method!=='POST')return res.status(405).end();if(!process.env.STRIPE_SECRET_KEY||!process.env.STRIPE_WEBHOOK_SECRET)return res.status(503).end();let event;try{const stripe=new Stripe(process.env.STRIPE_SECRET_KEY);event=stripe.webhooks.constructEvent(await rawBody(req),req.headers['stripe-signature'],process.env.STRIPE_WEBHOOK_SECRET)}catch{return res.status(400).send('Assinatura inválida')}if(event.type==='payment_intent.succeeded'&&event.data.object.metadata?.origin==='popozuda-reproducao'){const pi=event.data.object;console.log('Pagamento confirmado',JSON.stringify({intent:pi.id,order:pi.metadata.order_id,amount:pi.amount_received}));try{await markPaid(pi)}catch(e){console.error('promo.webhook',e.message);return res.status(500).json({error:'Registro do pagamento pendente'})}try{await metaPurchase(pi)}catch(e){console.error('Meta CAPI',e.message);return res.status(500).json({error:'Entrega de evento pendente'})}}return res.status(200).json({received:true})}
+import Stripe from 'stripe';
+import {markPaid} from '../lib/first-purchase.js';
+import {metaPurchase} from '../lib/meta-conversions.js';
+export const config={api:{bodyParser:false}};
+async function rawBody(req){const chunks=[];for await(const ch of req)chunks.push(Buffer.from(ch));return Buffer.concat(chunks)}
+export default async function handler(req,res){
+ if(req.method!=='POST')return res.status(405).end();
+ if(!process.env.STRIPE_SECRET_KEY||!process.env.STRIPE_WEBHOOK_SECRET)return res.status(503).end();
+ let event;
+ try{const stripe=new Stripe(process.env.STRIPE_SECRET_KEY);event=stripe.webhooks.constructEvent(await rawBody(req),req.headers['stripe-signature'],process.env.STRIPE_WEBHOOK_SECRET)}catch{return res.status(400).send('Assinatura inválida')}
+ if(event.type==='payment_intent.succeeded'&&event.data.object.metadata?.origin==='popozuda-reproducao'){
+  const pi=event.data.object;
+  if(pi.status!=='succeeded'||pi.amount_received<=0)return res.status(400).json({error:'Pagamento não confirmado'});
+  // Sandbox events never reach the live promotion ledger or production Pixel.
+  if(event.livemode!==true||pi.livemode!==true)return res.status(200).json({received:true,test:true});
+  console.log('Pagamento confirmado',JSON.stringify({intent:pi.id,order:pi.metadata.order_id,amount:pi.amount_received}));
+  try{await markPaid(pi)}catch(e){console.error('promo.webhook',e.message);return res.status(500).json({error:'Registro do pagamento pendente'})}
+  try{console.log('meta_purchase_delivery',JSON.stringify(await metaPurchase(pi,{created:event.created})))}catch(e){console.error('Meta CAPI',e.message);return res.status(500).json({error:'Entrega de evento pendente'})}
+ }
+ return res.status(200).json({received:true});
+}

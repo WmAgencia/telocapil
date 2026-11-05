@@ -229,7 +229,7 @@ for(const name of Object.values(routes)){
  fs.copyFileSync(path.join(root,name),path.join(publicDir,name));
 }
 if(fs.existsSync(path.join(root,'pedido.html'))){
- fs.copyFileSync(path.join(root,'pedido.html'),path.join(publicDir,'pedido.html'));
+ fs.writeFileSync(path.join(publicDir,'pedido.html'),injectMetaPixel(fs.readFileSync(path.join(root,'pedido.html'),'utf8'),'pedido'));
 }
 fs.cpSync(mediaDir,path.join(publicDir,'media'),{recursive:true,force:true});
 console.log('Vercel static storefront ready in public/');
