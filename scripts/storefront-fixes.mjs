@@ -17,6 +17,12 @@ export function polishStorefront(html) {
     .cart-drawer__empty-description:has(a[href^="#link-indisponivel"]){display:none!important}
   </style>`;
   const js=String.raw`<script id="popozuda-prune-inactive-actions">(function(){
+    document.addEventListener('submit',event=>{
+      const form=event.target.closest('form[data-replica-search]');if(!form)return;
+      event.preventDefault();event.stopImmediatePropagation();
+      const query=(form.querySelector('[name="q"]')?.value||'').trim().toLowerCase();
+      location.href=query.includes('lisin')?'lisinha.html':query.includes('spray')?'spray.html':query.includes('creme')||query.includes('popozuda')?'creme.html':'index.html#catalogo';
+    },true);
     document.addEventListener('click',event=>{
       const open=event.target.closest('[aria-controls="search-drawer-dialog"]');
       const dialog=document.getElementById('search-drawer-dialog');
