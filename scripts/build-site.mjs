@@ -6,6 +6,7 @@ import {upgradeCheckout} from './checkout-wizard.mjs';
 import {upgradePromotion} from './promo-frontend.mjs';
 import {polishCheckout} from './checkout-polish.mjs';
 import {polishStorefront} from './storefront-fixes.mjs';
+import {optimizeHtml} from './performance.mjs';
 
 const root=process.cwd();
 const chunks=Array.from({length:17},(_,i)=>fs.readFileSync(path.join(root,'payload',String(i).padStart(2,'0')+'.txt'),'utf8'));
@@ -201,14 +202,19 @@ for(const [name,urls] of galleryUrls){
 }
 const missingTestimonials=testimonialSrcs.filter(u=>!files.has(u));
 if(missingTestimonials.length)throw Error('Imagens de depoimentos não recuperadas: '+missingTestimonials.join(', '));
+const optimizationReport={};
 for(const file of Object.values(routes)){
  let html=fs.readFileSync(path.join(root,file),'utf8');
  for(const [url,local] of files){
-  html=html.replaceAll(url.replaceAll('&','&amp;'),local).replaceAll(url,local);
+  const destination='/'+local;
+  html=html.replaceAll(url.replaceAll('&','&amp;'),destination).replaceAll(url,destination);
  }
- fs.writeFileSync(path.join(root,file),html);
+ const optimized=optimizeHtml(html,mediaDir);
+ optimizationReport[file]=optimized.report;
+ fs.writeFileSync(path.join(root,file),optimized.html);
+ console.log('Popozuda HTML optimized',file,JSON.stringify(optimized.report));
 }
-const report={generatedAt:new Date().toISOString(),galleryAudit,testimonialImages:testimonialSrcs.length,missingTestimonials:missingTestimonials.length,embeddedImages:Object.keys(routes).length,externalImageUrls:remote.size,locallySaved:files.size,originalUnavailable:failed.length,officialSubstitutions,remoteFallbacks:unresolved.length,failed:unresolved.slice(0,30)};
+const report={generatedAt:new Date().toISOString(),optimizationReport,galleryAudit,testimonialImages:testimonialSrcs.length,missingTestimonials:missingTestimonials.length,embeddedImages:Object.keys(routes).length,externalImageUrls:remote.size,locallySaved:files.size,originalUnavailable:failed.length,officialSubstitutions,remoteFallbacks:unresolved.length,failed:unresolved.slice(0,30)};
 fs.writeFileSync(path.join(root,'image-build-report.json'),JSON.stringify(report,null,2));
 console.log('Popozuda image audit',JSON.stringify({external:remote.size,local:files.size,originalUnavailable:failed.length,officialSubstitutions,remoteFallbacks:unresolved.length}));
 if(failed.length)console.warn('Media download failures:',JSON.stringify(failed));
