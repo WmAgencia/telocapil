@@ -126,3 +126,4 @@ for(const file of Object.values(routes)){
 const report={generatedAt:new Date().toISOString(),embeddedImages:Object.keys(routes).length,externalImageUrls:remote.size,locallySaved:files.size,remoteFallbacks:failed.length,failed:failed.slice(0,30)};
 fs.writeFileSync(path.join(root,'image-build-report.json'),JSON.stringify(report,null,2));
 console.log('Popozuda image audit',JSON.stringify({external:remote.size,local:files.size,remoteFallbacks:failed.length}));
+if(failed.length)console.warn('Media download failures:',JSON.stringify(failed));
