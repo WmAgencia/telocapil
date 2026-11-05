@@ -117,6 +117,17 @@ async function download(u){
 if(process.env.POPOZUDA_SKIP_MEDIA!=='true'){
  await Promise.all(Array.from({length:12},async()=>{while(pending.length)await download(pending.shift())}));
 }
+// Original video miniatures no longer served by Shopify: use other licensed official
+// community images so these thumbnails never become empty rectangles.
+let officialSubstitutions=0;
+const replacementImages=communityUrls.filter(u=>files.has(u));
+for(const unavailable of failed){
+ if(unavailable.includes('moast-video-first-frame')&&replacementImages.length){
+  files.set(unavailable,files.get(replacementImages[officialSubstitutions % replacementImages.length]));
+  officialSubstitutions++;
+ }
+}
+const unresolved=failed.filter(u=>!files.has(u));
 for(const file of Object.values(routes)){
  let html=fs.readFileSync(path.join(root,file),'utf8');
  for(const [url,local] of files){
@@ -124,7 +135,7 @@ for(const file of Object.values(routes)){
  }
  fs.writeFileSync(path.join(root,file),html);
 }
-const report={generatedAt:new Date().toISOString(),embeddedImages:Object.keys(routes).length,externalImageUrls:remote.size,locallySaved:files.size,remoteFallbacks:failed.length,failed:failed.slice(0,30)};
+const report={generatedAt:new Date().toISOString(),embeddedImages:Object.keys(routes).length,externalImageUrls:remote.size,locallySaved:files.size,originalUnavailable:failed.length,officialSubstitutions,remoteFallbacks:unresolved.length,failed:unresolved.slice(0,30)};
 fs.writeFileSync(path.join(root,'image-build-report.json'),JSON.stringify(report,null,2));
-console.log('Popozuda image audit',JSON.stringify({external:remote.size,local:files.size,remoteFallbacks:failed.length}));
+console.log('Popozuda image audit',JSON.stringify({external:remote.size,local:files.size,originalUnavailable:failed.length,officialSubstitutions,remoteFallbacks:unresolved.length}));
 if(failed.length)console.warn('Media download failures:',JSON.stringify(failed));
