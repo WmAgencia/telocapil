@@ -12,6 +12,26 @@ export function polishStorefront(html) {
     .cart-drawer__empty-description:has(a[href^="#link-indisponivel"]){display:none!important}
   </style>`;
   const js=String.raw`<script id="popozuda-prune-inactive-actions">(function(){
+    // Keep keyboard activation equivalent to selecting an offer with a pointer.
+    document.addEventListener('keydown',event=>{
+      const offer=event.target.closest('.kaching-bundles__bar-main');
+      if(offer&&(event.key==='Enter'||event.key===' ')){event.preventDefault();offer.click()}
+    });
+    document.querySelectorAll('media-gallery').forEach(gallery=>{
+      const thumbs=[...gallery.querySelectorAll('.media-gallery__carousel-thumbnails .carousel__thumbnail')];
+      const prev=gallery.querySelector('button[data-ref="prev"]');
+      const next=gallery.querySelector('button[data-ref="next"]');
+      function sync(){
+        const index=Math.max(0,thumbs.findIndex(t=>t.classList.contains('is-active')));
+        if(prev)prev.disabled=index===0;
+        if(next)next.disabled=index===thumbs.length-1;
+      }
+      function move(delta){
+        const index=Math.max(0,thumbs.findIndex(t=>t.classList.contains('is-active')));
+        thumbs[Math.max(0,Math.min(thumbs.length-1,index+delta))]?.click();sync();
+      }
+      if(thumbs.length){prev?.addEventListener('click',()=>move(-1));next?.addEventListener('click',()=>move(1));thumbs.forEach(t=>t.addEventListener('click',()=>queueMicrotask(sync)));sync()}
+    });
     function prune(){
       document.querySelectorAll('product-card:has(a[href^="#produto-indisponivel"])').forEach(card=>{
         const slide=card.closest('.swiper-slide');(slide||card).remove();
