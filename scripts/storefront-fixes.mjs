@@ -16,6 +16,37 @@ export function polishStorefront(html) {
     product-card:has(a[href^="#produto-indisponivel"]){display:none!important}
     .cart-drawer__empty-description:has(a[href^="#link-indisponivel"]){display:none!important}
   </style>`;
+  // Product shots must remain fully visible, instead of being cropped by Shopify's
+  // original cover/crop card templates.  Scope changes to catalog media only.
+  const productPhotoFix=String.raw`<style id="popozuda-product-photo-contain">
+    product-card .product-card__media,
+    product-card .product-card__image-wrapper,
+    product-card .card__media,
+    .product-card .product-card__media,
+    .product-card .product-card__image-wrapper,
+    .product-card .card__media {
+      display:flex!important;align-items:center!important;justify-content:center!important;
+      min-width:0;overflow:hidden;
+    }
+    product-card .product-card__media img,
+    product-card .product-card__image-wrapper img,
+    product-card .card__media img,
+    .product-card .product-card__media img,
+    .product-card .product-card__image-wrapper img,
+    .product-card .card__media img {
+      display:block!important;width:100%!important;height:100%!important;
+      object-fit:contain!important;object-position:center center!important;
+      opacity:1!important;visibility:visible!important;transform:none!important;
+    }
+    @media(max-width:767px){
+      product-card .product-card__media img,
+      product-card .product-card__image-wrapper img,
+      .product-card .product-card__media img,
+      .product-card .product-card__image-wrapper img {
+        object-fit:contain!important;object-position:center!important;
+      }
+    }
+  </style>`;
   const js=String.raw`<script id="popozuda-prune-inactive-actions">(function(){
     document.addEventListener('submit',event=>{
       const form=event.target.closest('form[data-replica-search]');if(!form)return;
@@ -86,5 +117,5 @@ export function polishStorefront(html) {
       if(document.querySelector('product-card:has(a[href^="#produto-indisponivel"]),a[href^="#conta-indisponivel"],a[href^="#link-indisponivel"]'))prune();
     }).observe(document.documentElement,{subtree:true,childList:true});
   })();</script>`;
-  return html.replace('</head>',css+'</head>').replace('</body>',js+'</body>');
+  return html.replace('</head>',css+productPhotoFix+'</head>').replace('</body>',js+'</body>');
 }
