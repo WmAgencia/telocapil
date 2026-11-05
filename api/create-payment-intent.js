@@ -28,9 +28,21 @@ export default async function handler(req,res){
   const stripe=new Stripe(process.env.STRIPE_SECRET_KEY);
   if(claim.reusedIntent){
     const old=await stripe.paymentIntents.retrieve(claim.reusedIntent);
-    if(old.metadata?.origin!=='popozuda-reproducao'||old.metadata?.cpf_key!==ident.cpfKey)throw Error('Pedido já existente inválido');
+    if(old.metadata?.origin!=='popozuda-reproducao'||old.metadata?.cpf_key!==ident.cpfKey||old.metadata?.email_key!==ident.emailKey)throw Error('Pedido não pertence ao cadastro atual');
+    if(old.status==='succeeded'||old.status==='processing')return res.status(409).json({error:'Já existe um pagamento enviado para processamento. Aguarde a confirmação antes de tentar outra compra.'});
+    if(old.status==='canceled')return res.status(409).json({error:'Este pagamento foi cancelado. Aguarde alguns minutos e reinicie a compra.'});
+    if(!['requires_payment_method','requires_confirmation','requires_action'].includes(old.status))return res.status(409).json({error:'Seu pagamento ainda está sendo processado. Aguarde alguns minutos.'});
+    if(old.metadata?.items!==JSON.stringify(base.quantities)||Number(old.metadata?.shipping)!==freight){
+      return res.status(409).json({error:'O carrinho foi alterado desde a primeira tentativa. Aguarde alguns minutos e reinicie a compra para manter os valores corretos.'});
+    }
     const previousDiscount=Number(old.metadata.first_purchase_discount||0);
-    return res.status(200).json({clientSecret:old.client_secret,paymentIntentId:old.id,shippingCents:freight,amount:old.amount,firstPurchaseDiscountCents:previousDiscount,firstPurchaseEligible:previousDiscount>0,baseAmount:base.amount});
+    if(old.status!=='requires_action'){
+      // A returning customer may have corrected their delivery address after reload.
+      // Update the SAME PaymentIntent; never issue a duplicate charge or discount.
+      const refreshed=await stripe.paymentIntents.update(old.id,{shipping:{name,phone,address:{country:'BR',postal_code:postalCode,line1:line1+' '+number,line2:district+' '+clean(c.line2,80),city,state}},receipt_email:email});
+      return res.status(200).json({clientSecret:refreshed.client_secret,paymentIntentId:refreshed.id,shippingCents:freight,amount:refreshed.amount,firstPurchaseDiscountCents:previousDiscount,firstPurchaseEligible:previousDiscount>0,baseAmount:base.amount,continued:true});
+    }
+    return res.status(200).json({clientSecret:old.client_secret,paymentIntentId:old.id,shippingCents:freight,amount:old.amount,firstPurchaseDiscountCents:previousDiscount,firstPurchaseEligible:previousDiscount>0,baseAmount:base.amount,continued:true});
   }
   const promo=claim.eligible?Math.round(base.amount*.10):0;
   const finalAmount=base.amount-promo;
