@@ -22,18 +22,18 @@ export function polishStorefront(html) {
     });
     document.querySelectorAll('media-gallery').forEach(gallery=>{
       const thumbs=[...gallery.querySelectorAll('.media-gallery__carousel-thumbnails .carousel__thumbnail')];
-      const prev=gallery.querySelector('button[data-ref="prev"]');
-      const next=gallery.querySelector('button[data-ref="next"]');
+      const prev=[...gallery.querySelectorAll('button[data-ref="prev"]')];
+      const next=[...gallery.querySelectorAll('button[data-ref="next"]')];
       function sync(){
         const index=Math.max(0,thumbs.findIndex(t=>t.classList.contains('is-active')));
-        if(prev)prev.disabled=index===0;
-        if(next)next.disabled=index===thumbs.length-1;
+        prev.forEach(button=>button.disabled=index===0);
+        next.forEach(button=>button.disabled=index===thumbs.length-1);
       }
       function move(delta){
         const index=Math.max(0,thumbs.findIndex(t=>t.classList.contains('is-active')));
         thumbs[Math.max(0,Math.min(thumbs.length-1,index+delta))]?.click();sync();
       }
-      if(thumbs.length){prev?.addEventListener('click',()=>move(-1));next?.addEventListener('click',()=>move(1));thumbs.forEach(t=>t.addEventListener('click',()=>queueMicrotask(sync)));sync()}
+      if(thumbs.length){prev.forEach(button=>button.addEventListener('click',()=>move(-1)));next.forEach(button=>button.addEventListener('click',()=>move(1)));thumbs.forEach(t=>t.addEventListener('click',()=>queueMicrotask(sync)));sync()}
     });
     document.querySelectorAll('products-bought-together').forEach(group=>{
       const cards=[...group.querySelectorAll('.product-bought-together__item')];
