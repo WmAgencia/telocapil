@@ -23,5 +23,7 @@
       "source": "/products/spray-popozuda",
       "destination": "/spray.html"
     }
-  ]
+  ],
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null
 }
