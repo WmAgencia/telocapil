@@ -15,6 +15,10 @@ export function injectMetaPixel(html,page){
   const next="const before=cart[id]||0;cart[id]=Math.min(20,before+Math.max(1,qty));save();openCart();const added=cart[id]-before;if(added>0)document.dispatchEvent(new CustomEvent('popozuda:cart-add',{detail:{id,quantity:added,value:(calcLine(id,cart[id])-calcLine(id,before))/100}}));return true";
   if(!html.includes(old))throw Error('Meta cart instrumentation missing: '+page);
   html=html.replace(old,next);
+  const oldUpdate="function updateQty(id,delta){let n=(cart[id]||0)+delta;if(n<=0)delete cart[id];else cart[id]=Math.min(20,n);save();drawCart()}";
+  const nextUpdate="function updateQty(id,delta){const before=cart[id]||0;let n=before+delta;if(n<=0)delete cart[id];else cart[id]=Math.min(20,n);save();drawCart();const added=(cart[id]||0)-before;if(added>0)document.dispatchEvent(new CustomEvent('popozuda:cart-add',{detail:{id,quantity:added,value:(calcLine(id,cart[id])-calcLine(id,before))/100}}))}";
+  if(!html.includes(oldUpdate))throw Error('Meta quantity instrumentation missing: '+page);
+  html=html.replace(oldUpdate,nextUpdate);
  }
  if(page==='checkout'){
   html=html.replace(/origin:\{utmSource:[\s\S]*?fbc:window\.__popozudaTracking\?\.getAttribution\(\)\?\.fbc\|\|''\}/,"origin:(()=>{const a=window.__popozudaTracking?.getAttribution()||{};return {consent:localStorage.getItem('popozuda_analytics_consent_v1')==='yes',utmSource:a.utm_source||'',utmMedium:a.utm_medium||'',utmCampaign:a.utm_campaign||'',utmContent:a.utm_content||'',utmTerm:a.utm_term||'',fbp:a.fbp||'',fbc:a.fbc||'',sourceUrl:a.sourceUrl||''}})()");
@@ -89,14 +93,23 @@ function start(){
  if(PAGE==='checkout'||PAGE==='pedido'){
   const id=new URLSearchParams(location.search).get('payment_intent');
   if(id&&/^pi_[a-zA-Z0-9]+$/.test(id)){
-   fetch('/api/order-status?payment_intent='+encodeURIComponent(id),{cache:'no-store'})
+   function verifyReceipt(attempt){
+    if(saved()!=='yes')return;
+    fetch('/api/order-status?payment_intent='+encodeURIComponent(id),{cache:'no-store'})
     .then(r=>r.ok?r.json():null).then(order=>{
-      if(!order||order.status!=='succeeded'||order.livemode!==true||order.trackingAllowed!==true||!Number.isFinite(Number(order.amount))||Number(order.amount)<=0)return;
+      if(!order)return;
+      if(order.status!=='succeeded'){
+       if(['processing','requires_action'].includes(order.status)&&attempt<90)setTimeout(()=>verifyReceipt(attempt+1),2000);
+       return;
+      }
+      if(order.livemode!==true||order.trackingAllowed!==true||!Number.isFinite(Number(order.amount))||Number(order.amount)<=0)return;
       const k='popozuda_meta_paid_'+id;
       if(localStorage.getItem(k)==='1')return;
       const items=Array.isArray(order.contents)?order.contents:[];
       if(track('Purchase',{currency:'BRL',value:Number(order.amount)/100,content_type:'product',content_ids:items.map(p=>p.id),contents:items},{eventID:id})){localStorage.setItem(k,'1');sessionStorage.removeItem('popozuda_meta_checkout')}
     }).catch(()=>{});
+   }
+   verifyReceipt(0);
   }
  }
 }
