@@ -36,7 +36,13 @@ test('CAPI only sends confirmed consented live payments with deterministic dedup
  assert.equal(body.data[0].custom_data.value,83.87);
  assert.equal(body.data[0].event_name,'Purchase');
  assert.equal(calls,1);
+ const withHashedContact={...sample,receipt_email:'Teste@Example.com',shipping:{phone:'(15) 99999-9999'},metadata:{...sample.metadata,fbp:'',fbc:''}};
+ assert.equal((await metaPurchase(withHashedContact,{fetchImpl:fakeFetch,env})).sent,true);
+ assert.match(body.data[0].user_data.em[0],/^[a-f0-9]{64}$/);
+ assert.match(body.data[0].user_data.ph[0],/^[a-f0-9]{64}$/);
+ assert.equal(body.data[0].user_data.fbp,undefined);
+ assert.equal(calls,2);
  assert.equal((await metaPurchase({...sample,metadata:{...sample.metadata,analytics_consent:'no'}},{fetchImpl:fakeFetch,env})).sent,false);
  assert.equal((await metaPurchase({...sample,status:'requires_payment_method'},{fetchImpl:fakeFetch,env})).sent,false);
- assert.equal(calls,1);
+ assert.equal(calls,2);
 });
