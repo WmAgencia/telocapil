@@ -13,7 +13,8 @@
   "scripts": {
     "build": "node scripts/build-site.mjs",
     "start": "node server.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "prebuild": "node --test tests/tracking.test.js"
   },
   "devDependencies": {
     "jsdom": "26.1.0"

@@ -43,6 +43,11 @@ function track(name,data,extra){
  const options=Object.assign({eventID:eventId()},extra||{});
  try{window.fbq('trackSingle',PIXEL,name,data||{},options);if(debug)console.info('[Meta audit]',JSON.stringify({event:name,pixel:PIXEL,data:data||{},event_id:options.eventID}));return true}catch(e){return false}
 }
+function trackCustom(name,data,extra){
+ if(!started||typeof window.fbq!=='function'||saved()!=='yes')return false;
+ const options=Object.assign({eventID:eventId()},extra||{});
+ try{window.fbq('trackSingleCustom',PIXEL,name,data||{},options);if(debug)console.info('[Meta audit]',JSON.stringify({event:name,pixel:PIXEL,event_id:options.eventID}));return true}catch(e){return false}
+}
 function lineValue(id,quantity){
  const p=PRODUCTS[id];if(!p)return 0;
  const bundles=id==='lisinha'?{2:129.90,3:169.90}:id==='spray'?{2:119.90,3:159.90}:null;
@@ -70,7 +75,7 @@ function attribution(){
  try{sessionStorage.setItem(ATTR,JSON.stringify(result))}catch(e){}
  return result;
 }
-window.__popozudaTracking={getAttribution:attribution,pixelEvent:track};
+window.__popozudaTracking={getAttribution:attribution,pixelEvent:track,customEvent:trackCustom,cartData};
 document.addEventListener('popozuda:cart-add',function(event){
  const d=event.detail||{},p=PRODUCTS[d.id];if(p&&Number.isSafeInteger(d.quantity)&&d.quantity>0)track('AddToCart',productData(p,d.quantity,d.value));
 });
@@ -86,6 +91,7 @@ function start(){
  attribution();track('PageView');
  if(PRODUCTS[PAGE])track('ViewContent',productData(PRODUCTS[PAGE],1));
  if(PAGE==='checkout'){
+  trackCustom('CheckoutPageReady',cartData());
   const cart=cartData(),signature=JSON.stringify(cart.contents);
   let prior='';try{prior=sessionStorage.getItem('popozuda_meta_checkout')||''}catch(e){}
   if(cart.num_items&&prior!==signature&&track('InitiateCheckout',cart)){try{sessionStorage.setItem('popozuda_meta_checkout',signature)}catch(e){}}

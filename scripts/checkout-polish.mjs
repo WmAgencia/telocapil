@@ -52,8 +52,11 @@ export function polishCheckout(html,logoSource){
     }
   })();</script>`;
   const paymentInit="const el=elements.create('payment',{layout:'tabs'});document.getElementById('payment-element').textContent='';el.mount('#payment-element');";
-  const paymentFix="const el=elements.create('payment',{layout:'tabs'});const slot=document.getElementById('payment-element');slot.textContent='';el.on('ready',()=>{slot.dataset.status='ready'});el.on('loaderror',()=>{slot.dataset.status='error';slot.textContent='Não foi possível carregar Cartão/Pix. Atualize a página e tente novamente.'});el.mount('#payment-element');";
+  const paymentFix="const el=elements.create('payment',{layout:'tabs'});const slot=document.getElementById('payment-element');slot.textContent='';let paymentInfoTracked=false;el.on('change',event=>{if(paymentInfoTracked||!event?.complete)return;const t=window.__popozudaTracking;if(!t)return;paymentInfoTracked=t.pixelEvent?.('AddPaymentInfo',t.cartData?.()||{})===true;if(paymentInfoTracked)t.customEvent?.('CheckoutPaymentDetailsComplete',{step:'payment'});});el.on('ready',()=>{slot.dataset.status='ready'});el.on('loaderror',()=>{slot.dataset.status='error';slot.textContent='Não foi possível carregar Cartão/Pix. Atualize a página e tente novamente.'});el.mount('#payment-element');";
   if(!html.includes(paymentInit))throw Error('Stripe Payment Element não encontrado');
   html=html.replace(paymentInit,paymentFix);
+  const confirmCall="const result=await stripe.confirmPayment(";
+  if(!html.includes(confirmCall))throw Error('Stripe confirmPayment não encontrado');
+  html=html.replace(confirmCall,"window.__popozudaTracking?.customEvent?.('CheckoutPaymentAttempt',window.__popozudaTracking?.cartData?.()||{});"+confirmCall);
   return html.replace('</head>',css+'</head>').replace('</body>',script+'</body>');
 }

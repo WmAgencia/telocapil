@@ -7,7 +7,8 @@ export default async function handler(req,res){
  if(req.method!=='POST')return res.status(405).end();
  if(!process.env.STRIPE_SECRET_KEY||!process.env.STRIPE_WEBHOOK_SECRET)return res.status(503).end();
  let event;
- try{const stripe=new Stripe(process.env.STRIPE_SECRET_KEY);event=stripe.webhooks.constructEvent(await rawBody(req),req.headers['stripe-signature'],process.env.STRIPE_WEBHOOK_SECRET)}catch{return res.status(400).send('Assinatura inválida')}
+ try{const stripe=new Stripe(process.env.STRIPE_SECRET_KEY);event=stripe.webhooks.constructEvent(await rawBody(req),req.headers['stripe-signature'],process.env.STRIPE_WEBHOOK_SECRET)}catch(e){console.warn('stripe.webhook.invalid_signature',e?.type||'signature_invalid');return res.status(400).send('Assinatura inválida')}
+ if(event.type==='payment_intent.payment_failed')console.info('stripe.payment_failed',JSON.stringify({intent:event.data.object.id,code:event.data.object.last_payment_error?.code||'unknown',origin:event.data.object.metadata?.origin||'unknown'}));
  if(event.type==='payment_intent.succeeded'&&event.data.object.metadata?.origin==='popozuda-reproducao'){
   const pi=event.data.object;
   if(pi.status!=='succeeded'||pi.amount_received<=0)return res.status(400).json({error:'Pagamento não confirmado'});
