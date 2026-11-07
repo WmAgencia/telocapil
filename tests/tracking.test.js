@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {injectMetaPixel} from '../scripts/meta-pixel.mjs';
 import {polishCheckout} from '../scripts/checkout-polish.mjs';
-import {metaPurchase} from '../lib/meta-conversions.js';
+import {metaPurchase,paymentAttribution} from '../lib/meta-conversions.js';
 
 test('Pixel, custom events and cookie gating are injected once',()=>{
  const html='<html><head></head><body></body></html>';
@@ -45,4 +45,22 @@ test('CAPI only sends confirmed consented live payments with deterministic dedup
  assert.equal((await metaPurchase({...sample,metadata:{...sample.metadata,analytics_consent:'no'}},{fetchImpl:fakeFetch,env})).sent,false);
  assert.equal((await metaPurchase({...sample,status:'requires_payment_method'},{fetchImpl:fakeFetch,env})).sent,false);
  assert.equal(calls,2);
+});
+
+test('Attribution persists original landing, accepts both new store domains and rejects unrelated hosts',()=>{
+ const a=paymentAttribution({consent:true,sourceUrl:'https://popozuda-loja.vercel.app/checkout.html?private=ignored',
+  entryUrl:'https://popozuda-loja.vercel.app/products/lisinha?fbclid=hidden',
+  utmSource:'facebook',utmCampaign:'telocapil-nov',campaignId:'120260145640490386',adsetId:'120260145649490386',adId:'120260175612310386'});
+ assert.equal(a.event_source_url,'https://popozuda-loja.vercel.app/checkout.html');
+ assert.equal(a.entry_url,'https://popozuda-loja.vercel.app/products/lisinha');
+ assert.equal(a.utm_campaign,'telocapil-nov');
+ assert.equal(a.meta_ad_id,'120260175612310386');
+ assert.equal(paymentAttribution({consent:true,entryUrl:'https://other.invalid/product',sourceUrl:'https://other.invalid/checkout'}).entry_url,'');
+ assert.equal(paymentAttribution({consent:false,entryUrl:'https://popozuda-loja.vercel.app/products/lisinha',utmCampaign:'test'}).utm_campaign,'');
+ const source='<html><head></head><body><script>origin:{utmSource:attribution.utm_source||\'\',fbc:window.__popozudaTracking?.getAttribution()?.fbc||\'\'}</script></body></html>';
+ const result=injectMetaPixel(source,'checkout');
+ assert.match(result,/entryUrl:a.entryUrl/);
+ assert.match(result,/campaignId:a.campaign_id/);
+ assert.match(result,/adId:a.ad_id/);
+ assert.match(result,/result.entryUrl=location.origin\+location.pathname/);
 });

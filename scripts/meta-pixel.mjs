@@ -23,6 +23,7 @@ export function injectMetaPixel(html,page){
  if(page==='checkout'){
   html=html.replace(/origin:\{utmSource:[\s\S]*?fbc:window\.__popozudaTracking\?\.getAttribution\(\)\?\.fbc\|\|''\}/,"origin:(()=>{const a=window.__popozudaTracking?.getAttribution()||{};return {consent:localStorage.getItem('popozuda_analytics_consent_v1')==='yes',utmSource:a.utm_source||'',utmMedium:a.utm_medium||'',utmCampaign:a.utm_campaign||'',utmContent:a.utm_content||'',utmTerm:a.utm_term||'',fbp:a.fbp||'',fbc:a.fbc||'',sourceUrl:a.sourceUrl||''}})()");
   html=html.replace(/window\.__popozudaTracking\?\.pixelEvent\('InitiateCheckout',\{content_ids:Object\.keys\(cart\),content_type:'product',value:data\.amount\/100,currency:'BRL'\}\);/,'');
+  html=html.replace("sourceUrl:a.sourceUrl||''}})()","sourceUrl:a.sourceUrl||'',entryUrl:a.entryUrl||'',campaignId:a.campaign_id||'',adsetId:a.adset_id||'',adId:a.ad_id||''}})()");
  }
  const prior=(html.match(/fbevents\.js|fbq\s*\(\s*['"]init['"]|facebook\.com\/tr\?/gi)||[]).length;
  console.log('Meta pre-existing tracker markers',page,prior);
@@ -68,6 +69,9 @@ function attribution(){
  let previous={};try{previous=JSON.parse(sessionStorage.getItem(ATTR)||'{}')}catch(e){}
  const params=new URLSearchParams(location.search),result=Object.assign({},previous);
  for(const key of ['utm_source','utm_medium','utm_campaign','utm_content','utm_term']){const value=params.get(key);if(value)result[key]=value.slice(0,150)}
+ for(const key of ['campaign_id','adset_id','ad_id']){const value=params.get(key);if(value&&/^\d{6,25}$/.test(value))result[key]=value;}
+ const adSignal=['utm_source','utm_campaign','utm_content','fbclid','campaign_id','ad_id','adset_id'].some(key=>params.has(key));
+ if(PAGE!=='checkout'&&PAGE!=='pedido'&&(adSignal||!result.entryUrl))result.entryUrl=location.origin+location.pathname;
  const click=params.get('fbclid');if(click&&/^[a-zA-Z0-9_-]{6,500}$/.test(click))result.fbc='fb.1.'+Date.now()+'.'+click;
  const cookies=Object.fromEntries(document.cookie.split(';').map(x=>{const n=x.indexOf('=');return n<0?['','']:[x.slice(0,n).trim(),x.slice(n+1)]}));
  if(cookies._fbp)result.fbp=cookies._fbp;if(cookies._fbc&&!click)result.fbc=cookies._fbc;

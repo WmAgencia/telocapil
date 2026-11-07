@@ -34,7 +34,18 @@ export default async function handler(req,res){
     if(old.status==='succeeded'||old.status==='processing')return res.status(409).json({error:'Já existe um pagamento enviado para processamento. Aguarde a confirmação antes de tentar outra compra.'});
     if(old.status==='canceled')return res.status(409).json({error:'Este pagamento foi cancelado. Aguarde alguns minutos e reinicie a compra.'});
     if(!['requires_payment_method','requires_confirmation','requires_action'].includes(old.status))return res.status(409).json({error:'Seu pagamento ainda está sendo processado. Aguarde alguns minutos.'});
-    if(Object.entries(tracking).some(([key,value])=>(old.metadata?.[key]||'')!==value))await stripe.paymentIntents.update(old.id,{metadata:tracking});
+    // A reloaded checkout must not overwrite the ad that originally sourced the
+    // PaymentIntent. Only fill empty attribution keys, while respecting consent withdrawal.
+    const changes={analytics_consent:tracking.analytics_consent};
+    if(tracking.analytics_consent==='no'){
+      changes.fbp='';changes.fbc='';
+    }else{
+      for(const [key,value] of Object.entries(tracking)){
+        if(key==='analytics_consent'||!value||old.metadata?.[key])continue;
+        changes[key]=value;
+      }
+    }
+    if(Object.entries(changes).some(([key,value])=>(old.metadata?.[key]||'')!==value))await stripe.paymentIntents.update(old.id,{metadata:changes});
     if(old.metadata?.items!==JSON.stringify(base.quantities)||Number(old.metadata?.shipping)!==freight){
       // Only an unconfirmed intent can accept a revised basket. Stripe rejects
       // updates if a concurrent confirmation has already moved it to processing.
