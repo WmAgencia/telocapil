@@ -16,7 +16,8 @@ test('Pixel, custom events and cookie gating are injected once',()=>{
 test('Checkout instruments completed payment details and actual confirmation',()=>{
  const original='<html><head></head><body><a class="brand" aria-label="Voltar à loja">Loja</a><script>'+
   "const el=elements.create('payment',{layout:'tabs'});document.getElementById('payment-element').textContent='';el.mount('#payment-element');"+
-  "const result=await stripe.confirmPayment({elements});</script></body></html>";
+  "const result=await stripe.confirmPayment({elements});"+
+  "const theme=appearance:{theme:'stripe',variables:{colorPrimary:'#980d3e',borderRadius:'6px'}};</script></body></html>";
  const out=polishCheckout(original,'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=');
  assert.match(out,/AddPaymentInfo/);
  assert.match(out,/event\?\.complete/);
