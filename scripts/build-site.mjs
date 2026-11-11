@@ -9,6 +9,7 @@ import {polishStorefront} from './storefront-fixes.mjs';
 import {optimizeHtml} from './performance.mjs';
 import {injectMetaPixel} from './meta-pixel.mjs';
 import {updateStorePrices} from './store-pricing.mjs';
+import {addLimitedBatchBanner} from './limited-batch-banner.mjs';
 
 const root=process.cwd();
 const chunks=Array.from({length:17},(_,i)=>fs.readFileSync(path.join(root,'payload',String(i).padStart(2,'0')+'.txt'),'utf8'));
@@ -223,8 +224,9 @@ for(const file of Object.values(routes)){
  // with /media paths; apply all product-price rewrites only after that step.
  const page=Object.entries(routes).find(([,output])=>output===file)?.[0];
  const priced=updateStorePrices(optimized.html,page);
+ const finalHtml=addLimitedBatchBanner(priced,page);
  optimizationReport[file]=optimized.report;
- fs.writeFileSync(path.join(root,file),priced);
+ fs.writeFileSync(path.join(root,file),finalHtml);
  console.log('Popozuda HTML optimized',file,JSON.stringify(optimized.report));
 }
 const report={generatedAt:new Date().toISOString(),optimizationReport,galleryAudit,testimonialImages:testimonialSrcs.length,missingTestimonials:missingTestimonials.length,embeddedImages:Object.keys(routes).length,externalImageUrls:remote.size,locallySaved:files.size,originalUnavailable:failed.length,officialSubstitutions,remoteFallbacks:unresolved.length,failed:unresolved.slice(0,30)};

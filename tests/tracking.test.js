@@ -8,6 +8,7 @@ import {SHIPPING_FLAT_CENTS,firstPurchaseDiscountCents} from '../lib/checkout-pr
 import {upgradePromotion} from '../scripts/promo-frontend.mjs';
 import {CATALOG,linePrice} from '../lib/catalog.js';
 import {updateStorePrices} from '../scripts/store-pricing.mjs';
+import {addLimitedBatchBanner} from '../scripts/limited-batch-banner.mjs';
 
 test('Pixel, custom events and cookie gating are injected once',()=>{
  const html='<html><head></head><body></body></html>';
@@ -116,4 +117,18 @@ test('Store and checkout offer same kit prices without old Kaching selectors',()
  assert.match(updated,/price":1490/);
  assert.match(updated,/price":1990/);
  assert.match(updated,/id==='creme'\?\{2:2990,3:3990\}/);
+});
+
+test('Final-batch banner omits numeric inventory and artificial deadline',()=>{
+ const html='<html><head></head><body class="store"><main>Shop</main></body></html>';
+ for(const page of ['index','lisinha']){
+  const updated=addLimitedBatchBanner(html,page);
+  assert.match(updated,/LOTE ESPECIAL LIMITADO/);
+  assert.match(updated,/Últimas unidades disponíveis/);
+  assert.match(updated,/Último lote de Lisinha com preços especiais/);
+  assert.match(updated,/id="lote-especial-banner"/);
+  assert.equal(addLimitedBatchBanner(updated,page),updated);
+  assert.doesNotMatch(updated,/2300|2\\.300|07:00:00|cronômetro/i);
+ }
+ for(const page of ['creme','spray','checkout'])assert.equal(addLimitedBatchBanner(html,page),html);
 });
