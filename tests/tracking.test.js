@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import {injectMetaPixel} from '../scripts/meta-pixel.mjs';
 import {polishCheckout} from '../scripts/checkout-polish.mjs';
 import {metaPurchase,paymentAttribution} from '../lib/meta-conversions.js';
+import {moneySummary} from '../lib/catalog.js';
+import {SHIPPING_FLAT_CENTS,firstPurchaseDiscountCents} from '../lib/checkout-pricing.js';
+import {upgradePromotion} from '../scripts/promo-frontend.mjs';
 
 test('Pixel, custom events and cookie gating are injected once',()=>{
  const html='<html><head></head><body></body></html>';
@@ -63,4 +66,24 @@ test('Attribution persists original landing, accepts both new store domains and 
  assert.match(result,/campaignId:a.campaign_id/);
  assert.match(result,/adId:a.ad_id/);
  assert.match(result,/result.entryUrl=location.origin\+location.pathname/);
+});
+
+test('Flat freight is charged only once on all quantities and discount does not reduce it',()=>{
+ assert.equal(SHIPPING_FLAT_CENTS,1157);
+ for(const quantity of [1,2,3,5]){
+  const order=moneySummary([{id:'lisinha',quantity}],'',SHIPPING_FLAT_CENTS);
+  assert.equal(order.shippingCents,1157);
+  assert.equal(order.amount,order.subtotal+1157);
+  const discount=firstPurchaseDiscountCents(order.subtotal,true);
+  assert.equal(discount,Math.round(order.subtotal*.10));
+  assert.equal(order.amount-discount,order.subtotal-discount+1157);
+ }
+ assert.equal(firstPurchaseDiscountCents(2990,false),0);
+});
+test('Frontend never grants free shipping and discounts only product subtotal',()=>{
+ const source=String(upgradePromotion);
+ assert.match(source,/shippingFlatCents\?\?1157/);
+ assert.match(source,/getTotalItems\(\)\*\.10/);
+ assert.doesNotMatch(source,/freeShippingThresholdCents/);
+ assert.doesNotMatch(source,/getTotalItems\(\)\+checkoutFreight\(\)/);
 });

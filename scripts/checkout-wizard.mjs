@@ -211,7 +211,7 @@ cep.addEventListener('blur',()=>{const digits=cep.value.replace(/\D/g,'');if(dig
 })();</script>`;
 
 return html.replace(/<div class="development">[\s\S]*?<\/div>/,'')
-.replace('Preços e frete sujeitos à validação antes da publicação.','Frete calculado automaticamente antes do pagamento.')
+.replace('Preços e frete sujeitos à validação antes da publicação.','Frete fixo de R$ 11,57 por pedido, inclusive kits.')
 .replace('Política de privacidade e termos de compra: configurar a versão oficial aprovada.','Pagamento protegido e dados utilizados somente para processar o pedido.')
 .replace('</head>',css+premium+'</head>')
 .replace('</body>',script+cepFill+'</body>');

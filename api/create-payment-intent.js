@@ -2,6 +2,7 @@ import {paymentAttribution} from '../lib/meta-conversions.js';
 import Stripe from 'stripe';
 import crypto from 'node:crypto';
 import {moneySummary} from '../lib/catalog.js';
+import {SHIPPING_FLAT_CENTS,firstPurchaseDiscountCents} from '../lib/checkout-pricing.js';
 import {enabled} from './checkout-config.js';
 import {identity,reserve,attach,release} from '../lib/first-purchase.js';
 const clean=(x,n=120)=>typeof x==='string'?x.trim().slice(0,n):'';
@@ -18,10 +19,8 @@ export default async function handler(req,res){
   const tracking=paymentAttribution(input.origin);
   const token=clean(input.checkoutToken,80);
   if(!/^[0-9a-f-]{36}$/i.test(token))return res.status(400).json({error:'Identificador de checkout inválido'});
-  const subtotal=moneySummary(input.items,'',0),threshold=Number(process.env.SHIPPING_FREE_THRESHOLD_CENTS||0);
-  let freight=Number(process.env.SHIPPING_FLAT_CENTS);
-  if(!Number.isSafeInteger(freight)||freight<0||freight>100000)throw Error('Frete inválido');
-  if(subtotal.quantities.some(i=>['lisinha','spray'].includes(i.id)&&i.quantity>=2)||(threshold>0&&subtotal.subtotal>=threshold))freight=0;
+  // Exactly one shipping fee per order, including multi-unit kits.
+  const freight=SHIPPING_FLAT_CENTS;
   const base=moneySummary(input.items,'',freight);
   ident=identity(email,cpf);
   claim=await reserve(ident,token);
@@ -50,7 +49,7 @@ export default async function handler(req,res){
       // Only an unconfirmed intent can accept a revised basket. Stripe rejects
       // updates if a concurrent confirmation has already moved it to processing.
       if(old.status!=='requires_payment_method')return res.status(409).json({error:'O pagamento anterior já foi iniciado. Conclua-o antes de alterar o carrinho.'});
-      const revisedPromo=old.metadata.first_purchase==='1'?Math.round(base.amount*.10):0;
+      const revisedPromo=firstPurchaseDiscountCents(base.subtotal,old.metadata.first_purchase==='1');
       const revised=await stripe.paymentIntents.update(old.id,{
         amount:base.amount-revisedPromo,
         shipping:{name,phone,address:{country:'BR',postal_code:postalCode,line1:line1+' '+number,line2:district+' '+clean(c.line2,80),city,state}},
@@ -71,7 +70,7 @@ export default async function handler(req,res){
     }
     return res.status(200).json({clientSecret:old.client_secret,paymentIntentId:old.id,shippingCents:freight,amount:old.amount,firstPurchaseDiscountCents:previousDiscount,firstPurchaseEligible:previousDiscount>0,baseAmount:base.amount,continued:true});
   }
-  const promo=claim.eligible?Math.round(base.amount*.10):0;
+  const promo=firstPurchaseDiscountCents(base.subtotal,claim.eligible);
   const finalAmount=base.amount-promo;
   if(finalAmount<50)throw Error('Valor abaixo do mínimo');
   const data={amount:finalAmount,currency:'brl',automatic_payment_methods:{enabled:true},receipt_email:email,

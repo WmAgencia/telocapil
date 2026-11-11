@@ -112,6 +112,12 @@ for(const [name,file] of Object.entries(routes)){
  html=html.replace('</body>',`<script id="popozuda-testimonial-playback">document.addEventListener('click',function(event){const button=event.target.closest('video-card deferred-media > .deferred-media__poster-button');if(!button)return;const media=button.parentElement;if(media.querySelector(':scope > video'))return;const template=media.querySelector(':scope > template');const original=template&&template.content.querySelector('video');if(!original)return;event.preventDefault();const player=original.cloneNode(true);player.removeAttribute('autoplay');player.autoplay=false;player.removeAttribute('loop');player.loop=false;player.controls=true;player.muted=false;player.preload='metadata';player.playsInline=true;player.style.cssText='display:block;width:100%;height:100%;object-fit:cover;';media.appendChild(player);const play=player.play();if(play&&typeof play.then==='function'){play.then(function(){button.style.display='none';media.setAttribute('data-playing','true')}).catch(function(){player.remove();button.style.display='';media.removeAttribute('data-playing')})}else{button.style.display='none';media.setAttribute('data-playing','true')}});</script></body>`);
  html=html.replace(/<html\b/i,'<html data-popozuda-static="true"');
  html=html.replace(/Com tecnologia da Shopify/gi,'');
+ // Remove stale Shopify free-shipping promises from all published storefront HTML.
+ html=html.replaceAll('<p><strong>FRETE GRÁTIS</strong> A PARTIR DE R$100!</p>','<p><strong>FRETE FIXO</strong> DE R$ 11,57 POR PEDIDO!</p>');
+ html=html.replaceAll('Frete grátis a partir de R$119,90','Frete fixo de R$ 11,57 por pedido');
+ html=html.replaceAll('Escolha acima de 3 produtos e receba 5% de desconto e frete grátis no seu pedido.','Frete fixo de R$ 11,57 para todo o pedido, inclusive kits.');
+ html=html.replaceAll('FRETE GRÁTIS','FRETE FIXO R$ 11,57');
+ html=html.replaceAll('Frete calculado na finalização da compra.','Frete fixo de R$ 11,57 por pedido.');
  if(name==='checkout'){
   html=html.replace(/<div id="onefile-preview-disclaimer"[^>]*>[\s\S]*?<\/div>/gi,'');
   html=html.replaceAll('window.parent.location.href','window.location.href').replaceAll('window.top.location.href','window.location.href');
