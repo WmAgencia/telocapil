@@ -150,7 +150,8 @@ test('Final-batch banner on home, and persistent per-visitor seven-hour countdow
  assert.match(updated,/3 unidades/);
  assert.match(updated,/R\$ 29,90/);
  assert.match(updated,/<section id="pop-kit-offers">Escolha seu kit<label class="pop-kit-row"><input[^>]*value="1"/);
- assert.match(updated,/lote-destaque-finalizado \.lote-especial-clock/);
+ assert.match(updated,/lote-destaque-finalizado \.lote-especial-timer-caption/);
+ assert.match(updated,/lote-esgotado \.pop-kit-featured/);
  assert.doesNotMatch(updated,/lote-destaque-finalizado\{display:none/);
  assert.doesNotMatch(updated,/2300|2\.300|Ofertas acabam em 7 horas/i);
  for(const page of ['creme','spray','checkout'])assert.equal(addLimitedBatchBanner(home,page),home);
