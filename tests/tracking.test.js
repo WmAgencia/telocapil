@@ -119,16 +119,26 @@ test('Store and checkout offer same kit prices without old Kaching selectors',()
  assert.match(updated,/id==='creme'\?\{2:2990,3:3990\}/);
 });
 
-test('Final-batch banner omits numeric inventory and artificial deadline',()=>{
- const html='<html><head></head><body class="store"><main>Shop</main></body></html>';
- for(const page of ['index','lisinha']){
-  const updated=addLimitedBatchBanner(html,page);
-  assert.match(updated,/LOTE ESPECIAL LIMITADO/);
-  assert.match(updated,/Últimas unidades disponíveis/);
-  assert.match(updated,/Último lote de Lisinha com preços especiais/);
-  assert.match(updated,/id="lote-especial-banner"/);
-  assert.equal(addLimitedBatchBanner(updated,page),updated);
-  assert.doesNotMatch(updated,/2300|2\\.300|07:00:00|cronômetro/i);
- }
- for(const page of ['creme','spray','checkout'])assert.equal(addLimitedBatchBanner(html,page),html);
+test('Final-batch banner on home, and non-resetting seven-hour countdown between stock and kit on Lisinha',()=>{
+ const home='<html><head></head><body class="store"><main>Shop</main></body></html>';
+ const homeBanner=addLimitedBatchBanner(home,'index');
+ assert.match(homeBanner,/LOTE ESPECIAL LIMITADO/);
+ assert.match(homeBanner,/Últimas unidades disponíveis/);
+ assert.equal(addLimitedBatchBanner(homeBanner,'index'),homeBanner);
+ const product='<html><head></head><body><product-inventory data-product-id="9232838263011">Em estoque e pronto para envio</product-inventory><section id="pop-kit-offers">Escolha seu kit</section></body></html>';
+ const updated=addLimitedBatchBanner(product,'lisinha');
+ assert.match(updated,/Últimas unidades disponíveis/);
+ assert.match(updated,/Último lote de Lisinha com preços especiais/);
+ assert.match(updated,/id="lote-especial-banner"/);
+ assert.match(updated,/id="lote-timer-hours">07/);
+ assert.match(updated,/id="lote-timer-minutes">00/);
+ assert.match(updated,/id="lote-timer-seconds">00/);
+ assert.match(updated,/data-highlight-end="2026-11-11T07:48:00.000Z"/);
+ assert.match(updated,/deadline-Date\.now\(\)/);
+ assert.match(updated,/remain===0/);
+ assert.equal(addLimitedBatchBanner(updated,'lisinha'),updated);
+ assert.ok(updated.indexOf('</product-inventory>') < updated.indexOf('id="lote-especial-banner"'));
+ assert.ok(updated.indexOf('id="lote-especial-banner"') < updated.indexOf('id="pop-kit-offers"'));
+ assert.doesNotMatch(updated,/2300|2\.300|Ofertas acabam em 7 horas/i);
+ for(const page of ['creme','spray','checkout'])assert.equal(addLimitedBatchBanner(home,page),home);
 });
