@@ -6,6 +6,8 @@ import {metaPurchase,paymentAttribution} from '../lib/meta-conversions.js';
 import {moneySummary} from '../lib/catalog.js';
 import {SHIPPING_FLAT_CENTS,firstPurchaseDiscountCents} from '../lib/checkout-pricing.js';
 import {upgradePromotion} from '../scripts/promo-frontend.mjs';
+import {CATALOG,linePrice} from '../lib/catalog.js';
+import {updateStorePrices} from '../scripts/store-pricing.mjs';
 
 test('Pixel, custom events and cookie gating are injected once',()=>{
  const html='<html><head></head><body></body></html>';
@@ -86,4 +88,32 @@ test('Frontend never grants free shipping and discounts only product subtotal',(
  assert.match(source,/getTotalItems\(\)\*\.10/);
  assert.doesNotMatch(source,/freeShippingThresholdCents/);
  assert.doesNotMatch(source,/getTotalItems\(\)\+checkoutFreight\(\)/);
+});
+
+test('Lisinha and Centella bundles match Stripe amounts and freight',()=>{
+ const expected={lisinha:[1490,2290,2990],creme:[1990,2990,3990]};
+ for(const [id,prices] of Object.entries(expected))for(const quantity of [1,2,3]){
+  assert.equal(linePrice(id,quantity),prices[quantity-1]);
+  const summary=moneySummary([{id,quantity}],'',SHIPPING_FLAT_CENTS);
+  assert.equal(summary.amount,prices[quantity-1]+1157);
+  assert.equal(summary.amount-firstPurchaseDiscountCents(summary.subtotal,true),prices[quantity-1]-Math.round(prices[quantity-1]*.1)+1157);
+ }
+ assert.equal(CATALOG.spray.cents,6990);
+});
+test('Store and checkout offer same kit prices without old Kaching selectors',()=>{
+ const fake='<html><head></head><body><script>lisinha:{name:\'Lisinha\',price:6990,href:\'lisinha.html\',img:\'/media/b5c421fdf487253e1e7f0ea2.webp\',bundles:{1:6990,2:12990,3:16990}} creme:{name:\'Creme Popozuda\',price:8990,href:\'creme.html\',img:\'/media/f8f257c71ee93e15963f9193.webp\'} function bundleQty(){const bars=</script><kaching-bundle>Old</kaching-bundle><form data-replica-add="lisinha" id="BuyButtons-ProductForm-test">Comprar</form><p>R$ 69,90 R$ 129,90 R$ 169,90 R$ 89,90</p></body></html>';
+ const newLisinha=updateStorePrices(fake,'lisinha');
+ assert.match(newLisinha,/R\$ 14,90/);
+ assert.match(newLisinha,/R\$ 22,90/);
+ assert.match(newLisinha,/R\$ 29,90/);
+ assert.match(newLisinha,/value="3" checked/);
+ assert.doesNotMatch(newLisinha,/<kaching-bundle>/);
+ const newCream=updateStorePrices(fake.replace('data-replica-add="lisinha"','data-replica-add="creme"').replace('<kaching-bundle>Old</kaching-bundle>',''),'creme');
+ assert.match(newCream,/R\$ 19,90/);
+ assert.match(newCream,/R\$ 39,90/);
+ const checkout="<html><script>const CATALOG={lisinha:{name:'Lisinha',price:6990},creme:{name:'Creme Popozuda',price:8990},spray:{name:'Spray Popozuda',price:6990}};if(id==='creme')return sum+c*n;const deals=id==='lisinha'?{2:12990,3:16990}:{2:11990,3:15990};</script></html>";
+ const updated=updateStorePrices(checkout,'checkout');
+ assert.match(updated,/price":1490/);
+ assert.match(updated,/price":1990/);
+ assert.match(updated,/id==='creme'\?\{2:2990,3:3990\}/);
 });

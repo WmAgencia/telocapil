@@ -45,11 +45,12 @@ export default async function handler(req,res){
       }
     }
     if(Object.entries(changes).some(([key,value])=>(old.metadata?.[key]||'')!==value))await stripe.paymentIntents.update(old.id,{metadata:changes});
-    if(old.metadata?.items!==JSON.stringify(base.quantities)||Number(old.metadata?.shipping)!==freight){
+    const currentPromo=firstPurchaseDiscountCents(base.subtotal,old.metadata?.first_purchase==='1');
+    if(old.metadata?.items!==JSON.stringify(base.quantities)||Number(old.metadata?.shipping)!==freight||Number(old.amount)!==base.amount-currentPromo||Number(old.metadata?.first_purchase_discount||0)!==currentPromo){
       // Only an unconfirmed intent can accept a revised basket. Stripe rejects
       // updates if a concurrent confirmation has already moved it to processing.
       if(old.status!=='requires_payment_method')return res.status(409).json({error:'O pagamento anterior já foi iniciado. Conclua-o antes de alterar o carrinho.'});
-      const revisedPromo=firstPurchaseDiscountCents(base.subtotal,old.metadata.first_purchase==='1');
+      const revisedPromo=currentPromo;
       const revised=await stripe.paymentIntents.update(old.id,{
         amount:base.amount-revisedPromo,
         shipping:{name,phone,address:{country:'BR',postal_code:postalCode,line1:line1+' '+number,line2:district+' '+clean(c.line2,80),city,state}},

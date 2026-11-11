@@ -18,6 +18,7 @@ export default function handler(req,res){
  return res.status(200).json({
   enabled:ok,publishableKey:ok?process.env.STRIPE_PUBLISHABLE_KEY:null,
   pricing:Object.fromEntries(Object.entries(CATALOG).map(([id,p])=>[id,p.cents])),
+  bundlePricing:Object.fromEntries(Object.entries(CATALOG).filter(([,p])=>p.bundleCents).map(([id,p])=>[id,p.bundleCents])),
   shippingFlatCents:SHIPPING_FLAT_CENTS,
   freeShippingThresholdCents:0,
   firstPurchasePercent:10,

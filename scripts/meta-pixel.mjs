@@ -1,9 +1,7 @@
+import {CATALOG} from '../lib/catalog.js';
 const PIXEL_ID='2302179570557964';
-const PRODUCTS={
- lisinha:{id:'lisinha',name:'Sérum Lisinha',value:69.90},
- creme:{id:'creme',name:'Creme Centella',value:89.90},
- spray:{id:'spray',name:'Spray Popozuda',value:69.90}
-};
+const LABELS={lisinha:'Sérum Lisinha',creme:'Creme Centella',spray:'Spray Popozuda'};
+const PRODUCTS=Object.fromEntries(Object.entries(CATALOG).map(([id,p])=>[id,{id,name:LABELS[id],value:p.cents/100,bundles:p.bundleCents?Object.fromEntries(Object.entries(p.bundleCents).map(([qty,cents])=>[qty,cents/100])):null}]));
 
 /* Build-time injection for the Vercel storefront and Railway HTML. Do not ship
    server tokens or advanced matching data to the browser. */
@@ -51,7 +49,7 @@ function trackCustom(name,data,extra){
 }
 function lineValue(id,quantity){
  const p=PRODUCTS[id];if(!p)return 0;
- const bundles=id==='lisinha'?{2:129.90,3:169.90}:id==='spray'?{2:119.90,3:159.90}:null;
+ const bundles=p.bundles;
  if(!bundles)return rounded(p.value*quantity);
  return rounded(Math.floor(quantity/3)*bundles[3]+(quantity%3===2?bundles[2]:quantity%3===1?p.value:0));
 }

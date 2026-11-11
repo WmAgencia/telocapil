@@ -8,6 +8,7 @@ import {polishCheckout} from './checkout-polish.mjs';
 import {polishStorefront} from './storefront-fixes.mjs';
 import {optimizeHtml} from './performance.mjs';
 import {injectMetaPixel} from './meta-pixel.mjs';
+import {updateStorePrices} from './store-pricing.mjs';
 
 const root=process.cwd();
 const chunks=Array.from({length:17},(_,i)=>fs.readFileSync(path.join(root,'payload',String(i).padStart(2,'0')+'.txt'),'utf8'));
@@ -118,6 +119,7 @@ for(const [name,file] of Object.entries(routes)){
  html=html.replaceAll('Escolha acima de 3 produtos e receba 5% de desconto e frete grátis no seu pedido.','Frete fixo de R$ 11,57 para todo o pedido, inclusive kits.');
  html=html.replaceAll('FRETE GRÁTIS','FRETE FIXO R$ 11,57');
  html=html.replaceAll('Frete calculado na finalização da compra.','Frete fixo de R$ 11,57 por pedido.');
+ html=updateStorePrices(html,name);
  if(name==='checkout'){
   html=html.replace(/<div id="onefile-preview-disclaimer"[^>]*>[\s\S]*?<\/div>/gi,'');
   html=html.replaceAll('window.parent.location.href','window.location.href').replaceAll('window.top.location.href','window.location.href');
