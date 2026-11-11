@@ -108,6 +108,8 @@ test('Store and checkout offer same kit prices without old Kaching selectors',()
  assert.match(newLisinha,/R\$ 22,90/);
  assert.match(newLisinha,/R\$ 29,90/);
  assert.match(newLisinha,/value="3" checked/);
+ assert.match(newLisinha,/id="pop-featured-kit"/);
+ assert.match(newLisinha,/querySelector\('input\[name=pop-kit-qty\]:checked'\)/);
  assert.doesNotMatch(newLisinha,/<kaching-bundle>/);
  const newCream=updateStorePrices(fake.replace('data-replica-add="lisinha"','data-replica-add="creme"').replace('<kaching-bundle>Old</kaching-bundle>',''),'creme');
  assert.match(newCream,/R\$ 19,90/);
@@ -125,7 +127,7 @@ test('Final-batch banner on home, and non-resetting seven-hour countdown between
  assert.match(homeBanner,/LOTE ESPECIAL LIMITADO/);
  assert.match(homeBanner,/Últimas unidades disponíveis/);
  assert.equal(addLimitedBatchBanner(homeBanner,'index'),homeBanner);
- const product='<html><head></head><body><product-inventory data-product-id="9232838263011">Em estoque e pronto para envio</product-inventory><section id="pop-kit-offers">Escolha seu kit</section></body></html>';
+ const product='<html><head></head><body><product-inventory data-product-id="9232838263011">Em estoque e pronto para envio</product-inventory><section id="pop-kit-offers">Escolha seu kit<label class="pop-kit-row pop-kit-featured" id="pop-featured-kit"><input type="radio" name="pop-kit-qty" value="3" checked><span>3 unidades</span><strong>R$ 29,90</strong></label><label class="pop-kit-row"><input type="radio" name="pop-kit-qty" value="1">1 unidade</label><label class="pop-kit-row"><input type="radio" name="pop-kit-qty" value="2">2 unidades</label></section></body></html>';
  const updated=addLimitedBatchBanner(product,'lisinha');
  assert.match(updated,/Últimas unidades disponíveis/);
  assert.match(updated,/Último lote de Lisinha com preços especiais/);
@@ -139,6 +141,14 @@ test('Final-batch banner on home, and non-resetting seven-hour countdown between
  assert.equal(addLimitedBatchBanner(updated,'lisinha'),updated);
  assert.ok(updated.indexOf('</product-inventory>') < updated.indexOf('id="lote-especial-banner"'));
  assert.ok(updated.indexOf('id="lote-especial-banner"') < updated.indexOf('id="pop-kit-offers"'));
+ assert.ok(updated.indexOf('id="pop-featured-kit"') > updated.indexOf('id="lote-especial-banner"'));
+ assert.ok(updated.indexOf('id="pop-featured-kit"') < updated.indexOf('id="pop-kit-offers"'));
+ assert.equal((updated.match(/id="pop-featured-kit"/g)||[]).length,1);
+ assert.match(updated,/3 unidades/);
+ assert.match(updated,/R\$ 29,90/);
+ assert.match(updated,/<section id="pop-kit-offers">Escolha seu kit<label class="pop-kit-row"><input[^>]*value="1"/);
+ assert.match(updated,/lote-destaque-finalizado \.lote-especial-clock/);
+ assert.doesNotMatch(updated,/lote-destaque-finalizado\{display:none/);
  assert.doesNotMatch(updated,/2300|2\.300|Ofertas acabam em 7 horas/i);
  for(const page of ['creme','spray','checkout'])assert.equal(addLimitedBatchBanner(home,page),home);
 });

@@ -7,7 +7,7 @@ function offerHtml(id){
  const rows=[1,2,3].map(q=>{
   const total=q===1?p.cents:p.bundleCents[q],economy=q*p.cents-total;
   const badge=q===3?'MELHOR PREÇO':q===2?'MAIS VENDIDO':'';
-  return '<label class="pop-kit-row"><input type="radio" name="pop-kit-qty" value="'+q+'"'+(q===3?' checked':'')+'><span class="pop-kit-name"><span>'+q+' '+(q===1?'unidade':'unidades')+(badge?'<em>'+badge+'</em>':'')+'</span><small>'+(economy>0?'Economize '+price(economy):'Ideal para conhecer')+'</small></span><strong>'+price(total)+'</strong></label>';
+  return '<label class="pop-kit-row'+(id==='lisinha'&&q===3?' pop-kit-featured':'')+'"'+(id==='lisinha'&&q===3?' id="pop-featured-kit"':'')+'><input type="radio" name="pop-kit-qty" value="'+q+'"'+(q===3?' checked':'')+'><span class="pop-kit-name"><span>'+q+' '+(q===1?'unidade':'unidades')+(badge?'<em>'+badge+'</em>':'')+'</span><small>'+(economy>0?'Economize '+price(economy):'Ideal para conhecer')+'</small></span><strong>'+price(total)+'</strong></label>';
  }).join('');
  return '<section id="pop-kit-offers" aria-label="Kits especiais" class="pop-kit-offers"><h3>Escolha seu kit</h3><p>Quanto mais unidades, melhor o preço.</p>'+rows+'<div class="pop-kit-freight">Frete fixo de <b>R$ 11,57</b> para todo o pedido.</div></section>';
 }
@@ -53,7 +53,7 @@ export function updateStorePrices(html,page){
   html=after;
  }
  if(page==='lisinha'||page==='creme'){
-  html=one(html,"function bundleQty(){const bars=","function bundleQty(){const pick=document.querySelector('#pop-kit-offers input[name=pop-kit-qty]:checked');if(pick)return Number(pick.value);const bars=",'bundle selection');
+  html=one(html,"function bundleQty(){const bars=","function bundleQty(){const pick=document.querySelector('input[name=pop-kit-qty]:checked');if(pick)return Number(pick.value);const bars=",'bundle selection');
   const form=/<form\b(?=[^>]*\bid="BuyButtons-ProductForm)[^>]*>/g;
   const all=[...html.matchAll(form)];
   if(all.length!==1)throw Error('Primary kit form missing on '+page+': '+all.length);

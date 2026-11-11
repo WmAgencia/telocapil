@@ -11,6 +11,12 @@ export function addLimitedBatchBanner(html,page){
   const stock=/<product-inventory\b[^>]*data-product-id="9232838263011"[^>]*>[\s\S]*?<\/product-inventory>/gi;
   const matches=[...html.matchAll(stock)];
   if(matches.length!==1)throw Error('Countdown: product stock block not uniquely found: '+matches.length);
+  // Transfer the real radio input into the promotion; it remains part of checkout.
+  const featuredRx=/<label\b(?=[^>]*\bid="pop-featured-kit")[^>]*>[\s\S]*?<\/label>/gi;
+  const featuredRows=[...html.matchAll(featuredRx)];
+  if(featuredRows.length!==1)throw Error('Featured kit must be unique: '+featuredRows.length);
+  const featured=featuredRows[0][0];
+  html=html.replace(featuredRx,'');
   const timer='<section id="lote-especial-banner" class="lote-especial-detail" aria-label="Lote especial Lisinha" data-highlight-end="'+HIGHLIGHT_END_ISO+'">'+
     '<span class="lote-especial-detail-eyebrow">LOTE ESPECIAL LIMITADO</span>'+
     '<h3>Últimas unidades disponíveis</h3>'+
@@ -24,6 +30,7 @@ export function addLimitedBatchBanner(html,page){
       '<div class="lote-timer-cell"><strong id="lote-timer-seconds">00</strong><span>Segundos</span></div>'+
     '</div>'+
     '<p class="lote-timer-footnote">O prazo é deste destaque; a disponibilidade do lote depende do estoque.</p>'+
+    featured+
    '</section>';
   const style='<style id="lote-especial-banner-style">'+
    '#lote-especial-banner.lote-especial-detail{display:block;box-sizing:border-box;margin:18px 0 20px;padding:20px 16px;text-align:center;background:linear-gradient(155deg,#fff7fa,#f9edf3);border:1px solid #e6cfda;border-radius:19px;box-shadow:0 7px 24px rgba(93,29,60,.06);color:#631d3b}'+
@@ -37,8 +44,16 @@ export function addLimitedBatchBanner(html,page){
    '.lote-timer-cell span{font-size:10px;letter-spacing:.025em;color:#846073}'+
    '.lote-timer-colon{font-size:27px;line-height:1;color:#b8899f;font-weight:700;margin-bottom:16px}'+
    '.lote-especial-detail .lote-timer-footnote{margin:11px 0 0;color:#927686;font-size:10px}'+
-   '#lote-especial-banner.lote-destaque-finalizado{display:none!important}'+
-   '@media(max-width:420px){#lote-especial-banner.lote-especial-detail{padding:16px 10px}.lote-timer-cell{width:64px;padding:9px 5px 7px}.lote-timer-cell strong{font-size:26px}.lote-especial-detail h3{font-size:19px}}'+
+   '.lote-especial-detail .pop-kit-row.pop-kit-featured,.lote-especial-detail .pop-kit-row.pop-kit-featured:has(input:checked){display:flex;align-items:center;gap:13px;margin:17px 0 0;padding:16px 15px;text-align:left;background:linear-gradient(120deg,#fff9fc,#ffeaf3);border:1.5px solid #ad1a53;border-radius:16px;box-shadow:0 5px 16px rgba(132,19,66,.1);min-height:64px;transition:background .2s,box-shadow .2s,border-color .2s,transform .2s}'+
+   '.lote-especial-detail .pop-kit-featured:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(132,19,66,.13)}'+
+   '.lote-especial-detail .pop-kit-featured .pop-kit-name>span{font-size:18px;line-height:1.35;color:#75123c;gap:7px}'+
+   '.lote-especial-detail .pop-kit-featured .pop-kit-name em{font-size:9px;padding:4px 8px;border-radius:14px}'+
+   '.lote-especial-detail .pop-kit-featured .pop-kit-name small{font-size:12px;color:#8f6077}'+
+   '.lote-especial-detail .pop-kit-featured>strong{font-size:clamp(21px,3.4vw,29px);line-height:1.1;color:#961444;white-space:nowrap;letter-spacing:-.045em}'+
+   '.lote-especial-detail .pop-kit-featured:not(:has(input:checked)){background:#fff9fb;border-color:#e3b7ca;box-shadow:none}'+
+   '.lote-especial-detail .pop-kit-featured input{width:19px;height:19px;accent-color:#9d1247}'+
+   '#lote-especial-banner.lote-destaque-finalizado .lote-especial-clock,#lote-especial-banner.lote-destaque-finalizado .lote-especial-timer-caption{display:none!important}'+
+   '@media(max-width:420px){#lote-especial-banner.lote-especial-detail{padding:16px 10px}.lote-timer-cell{width:64px;padding:9px 5px 7px}.lote-timer-cell strong{font-size:26px}.lote-especial-detail h3{font-size:19px}.lote-especial-detail .pop-kit-row.pop-kit-featured,.lote-especial-detail .pop-kit-row.pop-kit-featured:has(input:checked){gap:10px;padding:12px 10px}.lote-especial-detail .pop-kit-featured .pop-kit-name>span{font-size:15px}.lote-especial-detail .pop-kit-featured .pop-kit-name em{font-size:8px}.lote-especial-detail .pop-kit-featured>strong{font-size:21px}}'+
    '</style>';
   const script='<script id="lote-especial-timer-script">(function(){'+
    'const root=document.getElementById("lote-especial-banner");if(!root)return;'+
@@ -48,7 +63,7 @@ export function addLimitedBatchBanner(html,page){
    'const pad=n=>String(n).padStart(2,"0");'+
    'let interval;function draw(){const remain=Math.max(0,Math.ceil((deadline-Date.now())/1000));'+
    'hours.textContent=pad(Math.floor(remain/3600));minutes.textContent=pad(Math.floor(remain%3600/60));seconds.textContent=pad(remain%60);'+
-   'if(remain===0){root.classList.add("lote-destaque-finalizado");if(interval)clearInterval(interval);}}'+
+   'if(remain===0){root.classList.add("lote-destaque-finalizado");const note=root.querySelector(".lote-timer-footnote");if(note)note.textContent="O destaque de tempo terminou; os kits continuam sujeitos à disponibilidade de estoque.";if(interval)clearInterval(interval);}}'+
    'draw();if(!root.classList.contains("lote-destaque-finalizado"))interval=setInterval(draw,1000);'+
    'document.addEventListener("visibilitychange",function(){if(!document.hidden)draw()});'+
    '})();</script>';
