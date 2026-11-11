@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import {markPaid} from '../lib/first-purchase.js';
+import {recordLisinhaSale} from '../lib/lote-stock.js';
 import {metaPurchase} from '../lib/meta-conversions.js';
 export const config={api:{bodyParser:false}};
 async function rawBody(req){const chunks=[];for await(const ch of req)chunks.push(Buffer.from(ch));return Buffer.concat(chunks)}
@@ -16,6 +17,7 @@ export default async function handler(req,res){
   if(event.livemode!==true||pi.livemode!==true)return res.status(200).json({received:true,test:true});
   console.log('Pagamento confirmado',JSON.stringify({intent:pi.id,order:pi.metadata.order_id,amount:pi.amount_received}));
   try{await markPaid(pi)}catch(e){console.error('promo.webhook',e.message);return res.status(500).json({error:'Registro do pagamento pendente'})}
+  try{await recordLisinhaSale(pi)}catch(e){console.error('stock.webhook',e.message);return res.status(500).json({error:'Registro do estoque pendente'})}
   try{console.log('meta_purchase_delivery',JSON.stringify(await metaPurchase(pi,{created:event.created})))}catch(e){console.error('Meta CAPI',e.message);return res.status(500).json({error:'Entrega de evento pendente'})}
  }
  return res.status(200).json({received:true});

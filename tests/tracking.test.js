@@ -121,7 +121,7 @@ test('Store and checkout offer same kit prices without old Kaching selectors',()
  assert.match(updated,/id==='creme'\?\{2:2990,3:3990\}/);
 });
 
-test('Final-batch banner on home, and non-resetting seven-hour countdown between stock and kit on Lisinha',()=>{
+test('Final-batch banner on home, and persistent per-visitor seven-hour countdown with global stock cutoff on Lisinha',()=>{
  const home='<html><head></head><body class="store"><main>Shop</main></body></html>';
  const homeBanner=addLimitedBatchBanner(home,'index');
  assert.match(homeBanner,/LOTE ESPECIAL LIMITADO/);
@@ -135,9 +135,12 @@ test('Final-batch banner on home, and non-resetting seven-hour countdown between
  assert.match(updated,/id="lote-timer-hours">07/);
  assert.match(updated,/id="lote-timer-minutes">00/);
  assert.match(updated,/id="lote-timer-seconds">00/);
- assert.match(updated,/data-highlight-end="2026-11-11T07:48:00.000Z"/);
- assert.match(updated,/deadline-Date\.now\(\)/);
- assert.match(updated,/remain===0/);
+ assert.match(updated,/data-personal-duration="7h"/);
+ assert.match(updated,/localStorage.getItem\(STORAGE_KEY\)/);
+ assert.match(updated,/started\+MS-Date.now\(\)/);
+ assert.match(updated,/fetch\("\/api\/lote-status"/);
+ assert.match(updated,/data.known===true && data.soldOut===true/);
+ assert.match(updated,/markSoldOut\(\)/);
  assert.equal(addLimitedBatchBanner(updated,'lisinha'),updated);
  assert.ok(updated.indexOf('</product-inventory>') < updated.indexOf('id="lote-especial-banner"'));
  assert.ok(updated.indexOf('id="lote-especial-banner"') < updated.indexOf('id="pop-kit-offers"'));
@@ -151,4 +154,12 @@ test('Final-batch banner on home, and non-resetting seven-hour countdown between
  assert.doesNotMatch(updated,/lote-destaque-finalizado\{display:none/);
  assert.doesNotMatch(updated,/2300|2\.300|Ofertas acabam em 7 horas/i);
  for(const page of ['creme','spray','checkout'])assert.equal(addLimitedBatchBanner(home,page),home);
+});
+
+// Stock accounting never assumes the rough batch estimate as a verified count.
+test('Confirmed Lisinha quantity extraction is independent from other products',async()=>{
+ const {purchasedLisinhaQuantity}=await import('../lib/lote-stock.js');
+ assert.equal(purchasedLisinhaQuantity({metadata:{items:JSON.stringify([{id:'creme',quantity:2},{id:'lisinha',quantity:3}])}}),3);
+ assert.equal(purchasedLisinhaQuantity({metadata:{items:'not-json'}}),0);
+ assert.equal(purchasedLisinhaQuantity({metadata:{items:JSON.stringify([{id:'lisinha',quantity:-2}])}}),0);
 });

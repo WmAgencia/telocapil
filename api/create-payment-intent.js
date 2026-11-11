@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import {moneySummary} from '../lib/catalog.js';
 import {SHIPPING_FLAT_CENTS,firstPurchaseDiscountCents} from '../lib/checkout-pricing.js';
 import {enabled} from './checkout-config.js';
+import {getLisinhaStock} from '../lib/lote-stock.js';
 import {identity,reserve,attach,release} from '../lib/first-purchase.js';
 const clean=(x,n=120)=>typeof x==='string'?x.trim().slice(0,n):'';
 function validCPF(s){const c=s.replace(/\D/g,'');if(c.length!==11||/^(\d)\1+$/.test(c))return false;for(let j=9;j<=10;j++){let sum=0;for(let i=0;i<j;i++)sum+=Number(c[i])*(j+1-i);if(Number(c[j])!==((sum*10)%11)%10)return false}return true}
@@ -22,6 +23,9 @@ export default async function handler(req,res){
   // Exactly one shipping fee per order, including multi-unit kits.
   const freight=SHIPPING_FLAT_CENTS;
   const base=moneySummary(input.items,'',freight);
+  const stock=await getLisinhaStock();
+  const requestedLisinha=base.quantities.find(x=>x.id==='lisinha')?.quantity||0;
+  if(stock.known&&requestedLisinha>stock.remainingUnits)return res.status(409).json({error:'O lote Lisinha está esgotado ou não possui unidades suficientes para este pedido.'});
   ident=identity(email,cpf);
   claim=await reserve(ident,token);
   if(claim.pending)return res.status(409).json({error:'Existe uma compra em andamento com esses dados. Conclua-a ou aguarde alguns minutos para tentar novamente.'});
