@@ -119,7 +119,6 @@ for(const [name,file] of Object.entries(routes)){
  html=html.replaceAll('Escolha acima de 3 produtos e receba 5% de desconto e frete grátis no seu pedido.','Frete fixo de R$ 11,57 para todo o pedido, inclusive kits.');
  html=html.replaceAll('FRETE GRÁTIS','FRETE FIXO R$ 11,57');
  html=html.replaceAll('Frete calculado na finalização da compra.','Frete fixo de R$ 11,57 por pedido.');
- html=updateStorePrices(html,name);
  if(name==='checkout'){
   html=html.replace(/<div id="onefile-preview-disclaimer"[^>]*>[\s\S]*?<\/div>/gi,'');
   html=html.replaceAll('window.parent.location.href','window.location.href').replaceAll('window.top.location.href','window.location.href');
@@ -220,8 +219,12 @@ for(const file of Object.values(routes)){
   html=html.replaceAll(url.replaceAll('&','&amp;'),destination).replaceAll(url,destination);
  }
  const optimized=optimizeHtml(html,mediaDir);
+ // The captured controller uses base64 images until optimization replaces them
+ // with /media paths; apply all product-price rewrites only after that step.
+ const page=Object.entries(routes).find(([,output])=>output===file)?.[0];
+ const priced=updateStorePrices(optimized.html,page);
  optimizationReport[file]=optimized.report;
- fs.writeFileSync(path.join(root,file),optimized.html);
+ fs.writeFileSync(path.join(root,file),priced);
  console.log('Popozuda HTML optimized',file,JSON.stringify(optimized.report));
 }
 const report={generatedAt:new Date().toISOString(),optimizationReport,galleryAudit,testimonialImages:testimonialSrcs.length,missingTestimonials:missingTestimonials.length,embeddedImages:Object.keys(routes).length,externalImageUrls:remote.size,locallySaved:files.size,originalUnavailable:failed.length,officialSubstitutions,remoteFallbacks:unresolved.length,failed:unresolved.slice(0,30)};
