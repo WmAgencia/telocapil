@@ -31,7 +31,9 @@ export function updateStorePrices(html,page){
   html=one(html,old,now,'checkout catalog');
   const oldBundles="if(id==='creme')return sum+c*n;const deals=id==='lisinha'?{2:12990,3:16990}:{2:11990,3:15990};";
   const newBundles="const deals=id==='lisinha'?{2:"+CATALOG.lisinha.bundleCents[2]+",3:"+CATALOG.lisinha.bundleCents[3]+"}:id==='creme'?{2:"+CATALOG.creme.bundleCents[2]+",3:"+CATALOG.creme.bundleCents[3]+"}:{2:"+CATALOG.spray.bundleCents[2]+",3:"+CATALOG.spray.bundleCents[3]+"};";
-  return one(html,oldBundles,newBundles,'checkout bundle pricing');
+  html=one(html,oldBundles,newBundles,'checkout bundle pricing');
+  html=one(html,"id==='creme'?CATALOG[id].price*n:","",'checkout item bundle');
+  return one(html,"const d=id==='lisinha'?{2:12990,3:16990}:{2:11990,3:15990};","const d=id==='lisinha'?"+JSON.stringify(CATALOG.lisinha.bundleCents)+":id==='creme'?"+JSON.stringify(CATALOG.creme.bundleCents)+":"+JSON.stringify(CATALOG.spray.bundleCents)+";",'checkout item prices');
  }
  const oldL="lisinha:{name:'Lisinha',price:6990,href:'lisinha.html',img:'/media/b5c421fdf487253e1e7f0ea2.webp',bundles:{1:6990,2:12990,3:16990}}";
  const newL="lisinha:{name:'Lisinha',price:"+CATALOG.lisinha.cents+",href:'lisinha.html',img:'/media/b5c421fdf487253e1e7f0ea2.webp',bundles:{1:"+CATALOG.lisinha.cents+",2:"+CATALOG.lisinha.bundleCents[2]+",3:"+CATALOG.lisinha.bundleCents[3]+"}}";

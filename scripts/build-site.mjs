@@ -224,7 +224,11 @@ for(const file of Object.values(routes)){
  // with /media paths; apply all product-price rewrites only after that step.
  const page=Object.entries(routes).find(([,output])=>output===file)?.[0];
  const priced=updateStorePrices(optimized.html,page);
- const finalHtml=addLimitedBatchBanner(priced,page);
+ let finalHtml=addLimitedBatchBanner(priced,page);
+ // Product aliases live under /products/: keep links, scripts and media rooted.
+ finalHtml=finalHtml.replace(/<head([^>]*)>/i,'<head$1><base href="/">');
+ finalHtml=finalHtml.replace(/(["'])((?:index|lisinha|creme|spray|checkout|pedido)\.html)/g,'$1/$2');
+
  optimizationReport[file]=optimized.report;
  fs.writeFileSync(path.join(root,file),finalHtml);
  console.log('Popozuda HTML optimized',file,JSON.stringify(optimized.report));

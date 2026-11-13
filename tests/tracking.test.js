@@ -115,7 +115,8 @@ test('Store and checkout offer same kit prices without old Kaching selectors',()
  assert.match(newCream,/R\$ 19,90/);
  assert.match(newCream,/R\$ 39,90/);
  const checkout="<html><script>const CATALOG={lisinha:{name:'Lisinha',price:6990},creme:{name:'Creme Popozuda',price:8990},spray:{name:'Spray Popozuda',price:6990}};if(id==='creme')return sum+c*n;const deals=id==='lisinha'?{2:12990,3:16990}:{2:11990,3:15990};</script></html>";
- const updated=updateStorePrices(checkout,'checkout');
+ const withItem=checkout.replace('</script>',"id==='creme'?CATALOG[id].price*n:const d=id==='lisinha'?{2:12990,3:16990}:{2:11990,3:15990};</script>");
+ const updated=updateStorePrices(withItem,'checkout');
  assert.match(updated,/price":1490/);
  assert.match(updated,/price":1990/);
  assert.match(updated,/id==='creme'\?\{2:2990,3:3990\}/);
